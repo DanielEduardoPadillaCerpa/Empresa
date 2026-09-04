@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Panel administrativo</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .metric-card {
+    background: var(--paper-50, #fff);
+    border: 1px solid rgba(11,35,64,0.12);
+    border-radius: 10px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    height: 100%;
+  }
+  .metric-label {
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #6c757d;
+  }
+  .metric-value {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--navy-900, #0b2340);
+    line-height: 1;
+  }
+  .metric-value.alerta { color: var(--tag-privado, #9c3b3b); }
+  .metric-icon { font-size: 1.3rem; opacity: .55; }
+  .metric-card .btn-ver {
+    align-self: flex-start;
+    margin-top: .35rem;
+  }
+  .chart-card {
+    background: var(--paper-50, #fff);
+    border: 1px solid rgba(11,35,64,0.12);
+    border-radius: 10px;
+    padding: 1.25rem;
+    height: 100%;
+  }
+  .chart-card canvas { max-height: 280px; }
+  .badge-agotado { background: var(--tag-privado, #9c3b3b); color: #fff; font-size: .68rem; }
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-institucional py-3">
+  <div class="container">
+    <a class="navbar-brand" href="index.html">
+      <span data-i18n="nav_brand">Suministros Institucionales</span>
+      <span class="badge-code" data-i18n="nav_badge">PROVEEDOR AUTORIZADO · REG-2026-0417</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav1">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="nav1">
+      <ul class="navbar-nav ms-auto gap-lg-3 align-items-lg-center">
+        <li class="nav-item"><a class="nav-link" href="landing.html" data-i18n="nav_inicio">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link" href="index.html" data-i18n="nav_catalogo">Catálogo</a></li>
+        <li class="nav-item nav-registro-link"><a class="nav-link" href="registro.html" data-i18n="nav_registro">Registro de cliente</a></li>
+        <li class="nav-item"><a class="nav-link active" href="#" data-i18n="nav_dashboard">Dashboard</a></li>
+        <li class="nav-item dropdown selector-idioma"></li>
+        <li class="nav-item d-flex align-items-center" id="auth-nav-slot"></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<header class="hero py-5">
+  <div class="container py-3">
+    <div class="eyebrow mb-2" data-i18n="admin_dashboard_header">Panel administrativo · Acceso restringido</div>
+    <h1 class="display-serif h2 mb-2" data-i18n="admin_dashboard_title">Dashboard general</h1>
+    <p class="lead col-lg-8 mb-0" data-i18n="admin_dashboard_lead">Resumen operativo de clientes, catálogo, inventario y pedidos.</p>
+  </div>
+</header>
+
+<main class="container py-5">
+
+  <div class="mb-4 d-flex flex-wrap gap-2 align-items-center justify-content-between">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <input type="hidden" id="apiBase" value="http://localhost:8080">
+      <label class="ms-3 me-2 small text-muted" data-i18n="admin_dashboard_stock_threshold">Umbral inventario bajo:</label>
+      <input type="number" id="umbralStock" class="form-control form-control-sm" style="max-width:90px;" value="5" min="0">
+      <button class="btn btn-sm btn-dark" onclick="cargarDashboard()" data-i18n="admin_dashboard_refresh">Actualizar</button>
+    </div>
+  </div>
+
+  <div id="estado" class="d-none"></div>
+
+  <!-- Tarjetas de métricas -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="metric-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <span class="metric-label" data-i18n="admin_dashboard_metric_clients">Clientes registrados</span>
+          <span class="metric-icon">👥</span>
+        </div>
+        <span class="metric-value" id="metricClientes">—</span>
+        <button class="btn btn-sm btn-outline-dark btn-ver" onclick="window.location.href='admin-clientes.html'" data-i18n="admin_dashboard_view_btn">Ver</button>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="metric-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <span class="metric-label" data-i18n="admin_dashboard_metric_products">Productos activos</span>
+          <span class="metric-icon">📦</span>
+        </div>
+        <span class="metric-value" id="metricProductos">—</span>
+        <button class="btn btn-sm btn-outline-dark btn-ver" onclick="window.location.href='admin-productos.html'" data-i18n="admin_dashboard_view_btn">Ver</button>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="metric-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <span class="metric-label" data-i18n="admin_dashboard_metric_low_stock">Inventario bajo</span>
+          <span class="metric-icon">⚠️</span>
+        </div>
+        <span class="metric-value alerta" id="metricInventarioBajo">—</span>
+        <button class="btn btn-sm btn-outline-dark btn-ver" onclick="window.location.href='admin-productos.html'" data-i18n="admin_dashboard_view_btn">Ver</button>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="metric-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <span class="metric-label" data-i18n="admin_dashboard_metric_orders">Pedidos totales</span>
+          <span class="metric-icon">🧾</span>
+        </div>
+        <span class="metric-value" id="metricPedidos">—</span>
+        <button class="btn btn-sm btn-outline-dark btn-ver" onclick="window.location.href='admin-pedidos.html'" data-i18n="admin_dashboard_view_btn">Ver</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficas -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="chart-card">
+        <h2 class="h6 mb-3" data-i18n="admin_dashboard_orders_by_day">Pedidos por día</h2>
+        <canvas id="chartPedidos"></canvas>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="chart-card">
+        <h2 class="h6 mb-3" data-i18n="admin_dashboard_products_by_category">Productos por categoría</h2>
+        <canvas id="chartCategorias"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inventario bajo -->
+  <div class="mb-4">
+    <h2 class="h6 mb-3" data-i18n="admin_dashboard_low_stock_title">Productos con inventario bajo</h2>
+    <div class="table-responsive" style="background:var(--paper-50); border:1px solid rgba(11,35,64,0.12);">
+      <table class="table table-sm mb-0 align-middle">
+        <thead style="background:var(--navy-900); color:var(--paper-100);">
+          <tr>
+            <th data-i18n="admin_dashboard_product">Producto</th>
+            <th data-i18n="admin_dashboard_category">Categoría</th>
+            <th data-i18n="admin_dashboard_available_quantity">Cantidad disponible</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyInventarioBajo">
+          <tr><td colspan="3" class="text-center text-muted py-3">Sin datos cargados todavía.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Últimos pedidos -->
+  <div>
+    <h2 class="h6 mb-3" data-i18n="admin_dashboard_latest_orders">Últimos pedidos registrados</h2>
+    <div class="table-responsive" style="background:var(--paper-50); border:1px solid rgba(11,35,64,0.12);">
+      <table class="table table-sm mb-0 align-middle">
+        <thead style="background:var(--navy-900); color:var(--paper-100);">
+          <tr>
+            <th data-i18n="admin_dashboard_order_id">ID Pedido</th>
+            <th data-i18n="admin_dashboard_unit">Unidad</th>
+            <th data-i18n="admin_dashboard_date">Fecha</th>
+            <th data-i18n="admin_dashboard_total">Total</th>
+            <th data-i18n="admin_dashboard_status">Estado</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyUltimosPedidos">
+          <tr><td colspan="5" class="text-center text-muted py-3">Sin datos cargados todavía.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<footer class="institucional py-4">
+  <div class="container d-flex flex-wrap justify-content-between small">
+    <span data-i18n="admin_dashboard_footer_copyright">© 2026 Suministros Institucionales S.A.S.</span>
+    <span data-i18n="admin_dashboard_footer_internal">Vista de uso interno — no exponer públicamente sin autenticación</span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/auth.js"></script>
+<script>
+const LIMITE_ULTIMOS_PEDIDOS = 10;
+
+function apiBaseUrl() {
+  return document.getElementById('apiBase').value.replace(/\/$/, '');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+function formatearPrecio(valor) {
+  const n = Number(valor) || 0;
+  return '$' + n.toLocaleString('es-CO');
+}
+
+function exigirSesion() {
+  const sesion = authLeer();
+  if (!sesion?.token) {
+    window.location.href = 'login.html?redirect=admin-dashboard.html';
+    return null;
+  }
+  if (sesion.rol !== 'admin') {
+    window.location.href = 'index.html';
+    return null;
+  }
+  return sesion;
+}
+
+function authHeaders(sesion) {
+  return { Authorization: 'Bearer ' + sesion.token };
+}
+
+// Hace la petición y, si el backend responde 401/403, redirige o informa
+// según corresponda (401 = sesión inválida, 403 = no es admin).
+async function fetchJson(sesion, ruta) {
+  const resp = await fetch(apiBaseUrl() + ruta, { headers: authHeaders(sesion) });
+  if (resp.status === 401) {
+    window.location.href = 'login.html?redirect=admin-dashboard.html';
+    throw new Error('sesión expirada');
+  }
+  if (resp.status === 403) {
+    throw new Error('tu usuario no tiene permisos de administrador para ver ' + ruta);
+  }
+  if (!resp.ok) throw new Error('HTTP ' + resp.status + ' en ' + ruta);
+  return resp.json();
+}
+
+let chartPedidos = null;
+let chartCategorias = null;
+let categoriasPorId = {};
+
+async function cargarDashboard() {
+  const sesion = exigirSesion();
+  if (!sesion) return;
+
+  const estado = document.getElementById('estado');
+  const umbral = Number(document.getElementById('umbralStock').value) || 0;
+  estado.textContent = 'Cargando métricas...';
+
+  try {
+    const [clientes, productos, pedidos, categorias] = await Promise.all([
+      fetchJson(sesion, '/api/clientes'),
+      fetchJson(sesion, '/api/productos'),
+      fetchJson(sesion, '/api/pedidos/todos'),
+      fetchJson(sesion, '/api/categorias'),
+    ]);
+    categoriasPorId = Object.fromEntries(categorias.map(c => [c.id, c.nombre]));
+
+    // ---- Métricas ----
+    document.getElementById('metricClientes').textContent = clientes.length;
+    document.getElementById('metricProductos').textContent = productos.length;
+    document.getElementById('metricPedidos').textContent = pedidos.length;
+
+    const productosBajos = productos.filter(p => Number(p.cantidad_disponible) <= umbral);
+    document.getElementById('metricInventarioBajo').textContent = productosBajos.length;
+
+    // ---- Tabla: inventario bajo ----
+    const tbodyInv = document.getElementById('tbodyInventarioBajo');
+    if (!productosBajos.length) {
+      tbodyInv.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">No hay productos por debajo del umbral definido.</td></tr>';
+    } else {
+      tbodyInv.innerHTML = productosBajos
+        .sort((a, b) => Number(a.cantidad_disponible) - Number(b.cantidad_disponible))
+        .map(p => `
+          <tr>
+            <td>${escapeHtml(p.nombre)} ${Number(p.cantidad_disponible) === 0 ? '<span class="badge badge-agotado ms-1">Agotado</span>' : ''}</td>
+            <td>${escapeHtml(categoriasPorId[p.categoria_id] || '')}</td>
+            <td>${escapeHtml(p.cantidad_disponible)}</td>
+          </tr>`).join('');
+    }
+
+    // ---- Tabla: últimos pedidos (ya vienen ordenados DESC por fecha desde el backend) ----
+    const tbodyPed = document.getElementById('tbodyUltimosPedidos');
+    const ultimos = pedidos.slice(0, LIMITE_ULTIMOS_PEDIDOS);
+    if (!ultimos.length) {
+      tbodyPed.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No hay pedidos registrados.</td></tr>';
+    } else {
+      tbodyPed.innerHTML = ultimos.map(p => `
+        <tr>
+          <td>${escapeHtml(p.id)}</td>
+          <td>${escapeHtml(p.cliente?.unidad)}</td>
+          <td class="small text-muted">${escapeHtml((p.fechaPedido ?? '').toString().replace('T', ' ').slice(0,16))}</td>
+          <td>${formatearPrecio(p.total)}</td>
+          <td>${escapeHtml(p.estado)}</td>
+        </tr>`).join('');
+    }
+
+    // ---- Gráfica: pedidos por día ----
+    const conteoPorDia = {};
+    pedidos.forEach(p => {
+      const dia = (p.fechaPedido ?? '').toString().slice(0, 10);
+      if (!dia) return;
+      conteoPorDia[dia] = (conteoPorDia[dia] || 0) + 1;
+    });
+    const diasOrdenados = Object.keys(conteoPorDia).sort();
+
+    const ctxPedidos = document.getElementById('chartPedidos');
+    if (chartPedidos) chartPedidos.destroy();
+    chartPedidos = new Chart(ctxPedidos, {
+      type: 'line',
+      data: {
+        labels: diasOrdenados,
+        datasets: [{
+          label: 'Pedidos',
+          data: diasOrdenados.map(d => conteoPorDia[d]),
+          borderColor: '#0b2340',
+          backgroundColor: 'rgba(11,35,64,0.1)',
+          tension: .3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+
+    // ---- Gráfica: productos por categoría ----
+    const conteoPorCategoria = {};
+    productos.forEach(p => {
+      const cat = categoriasPorId[p.categoria_id] || 'Sin categoría';
+      conteoPorCategoria[cat] = (conteoPorCategoria[cat] || 0) + 1;
+    });
+    const nombresCategorias = Object.keys(conteoPorCategoria);
+
+    const ctxCat = document.getElementById('chartCategorias');
+    if (chartCategorias) chartCategorias.destroy();
+    chartCategorias = new Chart(ctxCat, {
+      type: 'doughnut',
+      data: {
+        labels: nombresCategorias,
+        datasets: [{
+          data: nombresCategorias.map(c => conteoPorCategoria[c]),
+          backgroundColor: ['#0b2340', '#b08d57', '#6c757d', '#9c3b3b', '#5c8374', '#7a6ff0', '#c08552', '#3f6f76']
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+
+    estado.textContent = 'Datos actualizados.';
+  } catch (err) {
+    console.error(err);
+    estado.textContent = 'No se pudo cargar el dashboard (' + err.message + ').';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', cargarDashboard);
+</script>
+</body>
+</html>

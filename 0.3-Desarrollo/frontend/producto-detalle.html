@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-i18n="detail_page_title">Detalle de producto — Suministros Institucionales</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .detalle-img {
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f1efe9;
+    border: 1px solid rgba(11,35,64,0.12);
+  }
+  .detalle-img img { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 320px; }
+  .detalle-precio { font-family: 'IBM Plex Mono', monospace; font-size: 1.9rem; color: var(--navy-900, #0b2340); }
+  .detalle-meta dt { color: #6c757d; font-size: .8rem; }
+  .detalle-meta dd { margin-bottom: .6rem; }
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-institucional py-3">
+  <div class="container">
+    <a class="navbar-brand" href="index.html">
+      <span data-i18n="nav_brand">Suministros Institucionales</span>
+      <span class="badge-code" data-i18n="nav_badge">PROVEEDOR AUTORIZADO · REG-2026-0417</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav1">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="nav1">
+      <ul class="navbar-nav ms-auto gap-lg-3 align-items-lg-center">
+        <li class="nav-item"><a class="nav-link" href="landing.html" data-i18n="nav_inicio">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link active" href="index.html" data-i18n="nav_catalogo">Catálogo</a></li>
+        <li class="nav-item" id="navHistorial"><a class="nav-link" href="historial.html" data-i18n="orders_history_nav">Historial</a></li>
+<li class="nav-item" id="navMisReportes"><a class="nav-link" href="mis-reportes.html" data-i18n="nav_mis_reportes">Mis reportes</a></li>
+        <li class="nav-item">
+          <button class="btn btn-sm position-relative" style="border:1px solid var(--brass-600); color:var(--brass-500); background:transparent;" data-bs-toggle="offcanvas" data-bs-target="#carritoOffcanvas">
+            🛒 <span data-i18n="nav_carrito">Carrito</span>
+            <span id="carrito-badge" class="badge rounded-pill" style="background:var(--brass-600); position:absolute; top:-6px; right:-6px; display:none;">0</span>
+          </button>
+        </li>
+        <li class="nav-item dropdown selector-idioma"></li>
+        <li class="nav-item d-flex align-items-center" id="auth-nav-slot" data-i18n="nav_auth">Autenticación</li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container py-5">
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb small">
+      <li class="breadcrumb-item"><a href="index.html" data-i18n="products_heading">Productos disponibles</a></li>
+      <li class="breadcrumb-item active" id="breadcrumb-nombre" aria-current="page">…</li>
+    </ol>
+  </nav>
+
+  <div id="estado-detalle" class="text-muted small mb-3"></div>
+
+  <div id="detalle-contenido" class="row g-5" style="display:none;">
+    <div class="col-md-5">
+      <div class="detalle-img">
+        <img id="detalle-imagen" src="" alt="">
+      </div>
+    </div>
+    <div class="col-md-7">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="categoria-tag" id="detalle-categoria"></span>
+        <span class="badge-restringido badge rounded-pill" id="detalle-restringido" style="display:none;" data-i18n="detail_restricted_badge">Equipo restringido</span>
+      </div>
+      <h1 class="display-serif h3 mb-3" id="detalle-nombre"></h1>
+      <p class="text-muted" id="detalle-descripcion"></p>
+
+      <div class="detalle-precio my-3" id="detalle-precio"></div>
+
+      <dl class="row detalle-meta">
+        <div class="col-6">
+          <dt data-i18n="detail_availability">Disponibilidad</dt>
+          <dd id="detalle-disponibilidad"></dd>
+        </div>
+        <div class="col-6">
+          <dt data-i18n="detail_shipping">Despacho</dt>
+          <dd data-i18n="products_shipping_note">A la instalación registrada en 3–5 días hábiles</dd>
+        </div>
+      </dl>
+
+      <div id="detalle-aviso-restringido" class="aviso-sensible mb-3" style="display:none;">
+        <span data-i18n="detail_restricted_notice">Este producto requiere validación especial: tu cuenta debe tener registrada la autorización/verificación de antecedentes para poder comprarlo.</span>
+        <a href="registro.html" data-i18n="cart_restricted_notice_link">formulario de registro</a>.
+      </div>
+
+      <div class="d-flex align-items-center gap-3 mt-4">
+        <label for="detalle-cantidad" class="small mb-0" data-i18n="detail_quantity">Cantidad:</label>
+        <input type="number" id="detalle-cantidad" class="form-control" style="max-width:100px;" value="1" min="1">
+        <button id="detalle-btn-agregar" class="btn btn-dark px-4" data-i18n="detail_add_to_cart">Agregar al carrito</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="institucional py-4">
+  <div class="container d-flex flex-wrap justify-content-between small">
+    <span data-i18n="footer_rights">© 2026 Suministros Institucionales S.A.S. · NIT 900.XXX.XXX-1</span>
+    <span><span data-i18n="footer_privacy">Tratamiento de datos conforme a la Ley 1581 de 2012</span> · <a href="registro.html" data-i18n="footer_policy_link">Ver política</a></span>
+  </div>
+</footer>
+
+<!-- Carrito lateral (idéntico al del catálogo, para poder agregar sin salir de la ficha) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="carritoOffcanvas">
+  <div class="offcanvas-header" style="background:var(--navy-900); color:var(--paper-50);">
+    <h5 class="offcanvas-title display-serif h6 mb-0" data-i18n="cart_title">Tu carrito</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body p-0 d-flex flex-column">
+    <div id="carrito-aviso-restringido" class="aviso-sensible m-3" style="display:none;">
+      <span data-i18n="cart_restricted_notice_pre">
+        Tu carrito incluye equipo táctico restringido. Para completar este pedido necesitarás
+        registrar el número de consulta de antecedentes judiciales en el
+      </span>
+      <a href="registro.html" data-i18n="cart_restricted_notice_link">formulario de registro</a>.
+    </div>
+    <div id="carrito-items" class="flex-grow-1 overflow-auto"></div>
+    <div class="p-3 border-top">
+      <div class="d-flex justify-content-between mb-3">
+        <span class="fw-semibold" data-i18n="cart_total_label">Total</span>
+        <span id="carrito-total" class="precio">$0</span>
+      </div>
+      <button class="btn btn-dark w-100" onclick="confirmarCompra()" data-i18n="cart_confirm_btn">Confirmar pedido</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/imagenes.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/navbar.js"></script>
+
+<script>
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function formatearPrecio(valor) {
+  const n = Number(valor) || 0;
+  return '$' + n.toLocaleString('es-CO');
+}
+
+let productoActual = null;
+
+async function cargarDetalle() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  const estadoEl = document.getElementById('estado-detalle');
+
+  if (!id) {
+    estadoEl.textContent = 'No se indicó qué producto mostrar.';
+    return;
+  }
+
+  estadoEl.textContent = 'Cargando producto...';
+
+  try {
+    const [respProducto, respCategorias] = await Promise.all([
+      fetch(API_BASE + '/api/productos/' + encodeURIComponent(id)),
+      fetch(API_BASE + '/api/categorias')
+    ]);
+    if (!respProducto.ok) throw new Error(respProducto.status === 404 ? 'Producto no encontrado' : 'HTTP ' + respProducto.status);
+
+    const p = await respProducto.json();
+    const categorias = respCategorias.ok ? await respCategorias.json() : [];
+    const categoriaNombre = (categorias.find(c => String(c.id) === String(p.categoria_id)) || {}).nombre || '';
+
+    productoActual = p;
+
+    document.title = p.nombre + ' — Suministros Institucionales';
+    document.getElementById('breadcrumb-nombre').textContent = p.nombre;
+    document.getElementById('detalle-imagen').src = imgProducto(p);
+    document.getElementById('detalle-imagen').alt = p.nombre;
+    document.getElementById('detalle-categoria').textContent = categoriaNombre;
+    document.getElementById('detalle-nombre').textContent = p.nombre;
+    document.getElementById('detalle-descripcion').textContent = p.descripcion || '';
+    document.getElementById('detalle-precio').textContent = formatearPrecio(p.precio);
+
+    const esRestringido = p.restringido === 1 || p.restringido === true;
+    document.getElementById('detalle-restringido').style.display = esRestringido ? 'inline-block' : 'none';
+    document.getElementById('detalle-aviso-restringido').style.display = esRestringido ? 'block' : 'none';
+
+    const sinStock = Number(p.cantidad_disponible) <= 0;
+    const disponibilidadEl = document.getElementById('detalle-disponibilidad');
+    const cantidadInput = document.getElementById('detalle-cantidad');
+    const btnAgregar = document.getElementById('detalle-btn-agregar');
+
+    if (sinStock) {
+      disponibilidadEl.innerHTML = '<span class="badge bg-secondary" data-i18n="detail_out_of_stock">Agotado</span>';
+      cantidadInput.disabled = true;
+      btnAgregar.disabled = true;
+      btnAgregar.textContent = 'Sin inventario';
+    } else {
+      disponibilidadEl.textContent = p.cantidad_disponible + ' unidades disponibles';
+      cantidadInput.max = p.cantidad_disponible;
+    }
+
+    document.getElementById('detalle-contenido').style.display = 'flex';
+    estadoEl.textContent = '';
+
+    if (typeof aplicarIdioma === 'function') aplicarIdioma(idiomaGuardado());
+  } catch (err) {
+    estadoEl.textContent = 'No se pudo cargar el producto (' + err.message + ').';
+  }
+}
+
+document.getElementById('detalle-btn-agregar')?.addEventListener('click', () => {
+  if (!productoActual) return;
+  const cantidadDeseada = Math.max(1, parseInt(document.getElementById('detalle-cantidad').value, 10) || 1);
+
+  const items = carritoLeer();
+  const existente = items.find(i => i.id === String(productoActual.id));
+  const totalEnCarrito = (existente?.cantidad || 0) + cantidadDeseada;
+
+  if (totalEnCarrito > productoActual.cantidad_disponible) {
+    alert('No hay suficiente inventario disponible para esa cantidad.');
+    return;
+  }
+
+  if (existente) {
+    existente.cantidad = totalEnCarrito;
+  } else {
+    items.push({
+      id: String(productoActual.id),
+      nombre: productoActual.nombre,
+      precio: Number(productoActual.precio),
+      restringido: productoActual.restringido === 1 || productoActual.restringido === true,
+      cantidad: cantidadDeseada
+    });
+  }
+  carritoGuardar(items);
+
+  const btn = document.getElementById('detalle-btn-agregar');
+  const textoOriginal = btn.textContent;
+  btn.textContent = 'Agregado ✓';
+  setTimeout(() => { btn.textContent = textoOriginal; }, 900);
+});
+
+document.addEventListener('DOMContentLoaded', cargarDetalle);
+</script>
+</body>
+</html>

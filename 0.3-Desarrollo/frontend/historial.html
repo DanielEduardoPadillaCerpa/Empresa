@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="orders_page_title">Historial de compras — Suministros Institucionales</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-institucional py-3">
+  <div class="container">
+    <a class="navbar-brand" href="index.html">
+      <span data-i18n="nav_brand">Suministros Institucionales</span>
+      <span class="badge-code" data-i18n="nav_badge">PROVEEDOR AUTORIZADO · REG-2026-0417</span>
+    </a>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav ms-auto gap-lg-3 align-items-lg-center">
+        <li class="nav-item"><a class="nav-link" href="index.html" data-i18n="nav_catalogo">Catálogo</a></li>
+        <li class="nav-item" id="navRegistro">
+          <a class="nav-link" href="registro.html" data-i18n="nav_registro">Registro</a>
+        </li>
+        <li class="nav-item" id="navHistorial"><a class="nav-link" href="historial.html" data-i18n="orders_history_nav">Historial</a></li>
+<li class="nav-item" id="navMisReportes"><a class="nav-link" href="mis-reportes.html" data-i18n="nav_mis_reportes">Mis reportes</a></li>
+        <li class="nav-item dropdown selector-idioma"></li>
+        <li class="nav-item d-flex align-items-center" id="auth-nav-slot"></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<header class="hero py-5">
+  <div class="container py-3">
+    <div class="eyebrow mb-2" data-i18n="orders_client_panel">Panel del cliente</div>
+    <h1 class="display-serif h2 mb-2" data-i18n="orders_heading">Historial de compras</h1>
+    <p class="lead col-lg-8 mb-0" data-i18n="orders_lead">Consulta tus pedidos anteriores, con detalle de productos, total y estado.</p>
+  </div>
+</header>
+
+<main class="container py-5">
+  <div id="estado" class="text-muted small mb-3"></div>
+  <div class="table-responsive" style="background:var(--paper-50); border:1px solid rgba(11,35,64,0.12);">
+    <table class="table table-sm mb-0 align-middle">
+      <thead style="background:var(--navy-900); color:var(--paper-100);">
+        <tr>
+          <th data-i18n="orders_id">ID</th>
+          <th data-i18n="orders_date">Fecha</th>
+          <th data-i18n="orders_products">Productos</th>
+          <th data-i18n="orders_total">Total</th>
+          <th data-i18n="orders_status">Estado</th>
+          <th data-i18n="orders_actions">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyPedidos">
+        <tr><td colspan="6" class="text-center text-muted py-4" data-i18n="orders_no_data">Sin pedidos todavía.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<footer class="institucional py-4">
+  <div class="container d-flex flex-wrap justify-content-between small">
+    <span data-i18n="orders_footer_copyright">© 2026 Suministros Institucionales S.A.S.</span>
+    <span data-i18n="orders_footer_label">Vista de cliente — historial de compras</span>
+  </div>
+</footer>
+
+<script src="js/i18n.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+async function cargarHistorial() {
+  const sesion = authLeer();
+  if (!sesion?.token) {
+    window.location.href = 'login.html?redirect=historial.html';
+    return;
+  }
+
+  const estado = document.getElementById('estado');
+  const tbody = document.getElementById('tbodyPedidos');
+  estado.textContent = 'Consultando historial...';
+
+  try {
+    const resp = await fetch('http://localhost:8080/api/pedidos', {
+      headers: { Authorization: 'Bearer ' + sesion.token }
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const pedidos = await resp.json();
+
+    if (!pedidos.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4" data-i18n="orders_empty">No hay pedidos registrados.</td></tr>';
+    } else {
+      tbody.innerHTML = pedidos.map(p => `
+        <tr>
+          <td class="text-muted">${p.id}</td>
+          <td>${new Date(p.fechaPedido).toLocaleString()}</td>
+          <td>${p.items.map(i => i.nombre + ' × ' + i.cantidad).join(', ')}</td>
+          <td>$${p.total}</td>
+          <td>${p.estado}</td>
+          <td>${p.estado === 'pendiente'
+            ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelarPedido(${p.id})" data-i18n="orders_cancel_btn">Cancelar</button>`
+            : ''}</td>
+        </tr>`).join('');
+    }
+    estado.textContent = pedidos.length + ' pedido(s) cargado(s).';
+  } catch (err) {
+    estado.textContent = 'Error al consultar pedidos (' + err.message + ').';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4" data-i18n="orders_connection_error">Error de conexión.</td></tr>';
+  }
+}
+
+// Cancela un pedido propio (solo posible mientras está "pendiente" — el
+// backend rechaza la petición si ya fue enviado, entregado o cancelado).
+async function cancelarPedido(pedidoId) {
+  const sesion = authLeer();
+  if (!sesion?.token) {
+    window.location.href = 'login.html?redirect=historial.html';
+    return;
+  }
+  if (!confirm('¿Seguro que deseas cancelar este pedido?')) return;
+
+  const estado = document.getElementById('estado');
+  try {
+    const resp = await fetch('http://localhost:8080/api/pedidos/' + pedidoId + '/cancelar', {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + sesion.token }
+    });
+    const datos = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(datos.error || 'HTTP ' + resp.status);
+    await cargarHistorial();
+  } catch (err) {
+    estado.textContent = 'No se pudo cancelar el pedido (' + err.message + ').';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', cargarHistorial);
+</script>
+</body>
+</html>

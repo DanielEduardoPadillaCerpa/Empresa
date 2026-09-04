@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-i18n="registration_page_title">Registro de cliente — Suministros Institucionales</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-institucional py-3">
+  <div class="container">
+    <a class="navbar-brand" href="index.html">
+      <span data-i18n="nav_brand">Suministros Institucionales</span>
+      <span class="badge-code" data-i18n="nav_badge">PROVEEDOR AUTORIZADO · REG-2026-0417</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav1">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="nav1">
+      <ul class="navbar-nav ms-auto gap-lg-3">
+        <li class="nav-item"><a class="nav-link" href="landing.html" data-i18n="nav_inicio">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link" href="index.html" data-i18n="nav_catalogo">Catálogo</a></li>
+        <li class="nav-item"><a class="nav-link active" href="registro.html" data-i18n="nav_registro">Registro de cliente</a></li>
+        <li class="nav-item" id="navHistorial"><a class="nav-link" href="historial.html" data-i18n="orders_history_nav">Historial</a></li>
+<li class="nav-item" id="navMisReportes"><a class="nav-link" href="mis-reportes.html" data-i18n="nav_mis_reportes">Mis reportes</a></li>
+        <li class="nav-item dropdown selector-idioma"></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<header class="hero py-5">
+  <div class="container py-3">
+    <div class="eyebrow mb-2" data-i18n="registration_header">Ficha del titular · Ley 1581 de 2012</div>
+    <h1 class="display-serif h2 mb-2" data-i18n="registration_title">Registro de cliente</h1>
+    <p class="lead col-lg-8 mb-0" data-i18n="registration_lead">Cada dato solicitado está clasificado según su nivel de sensibilidad. Solo recolectamos lo estrictamente necesario para procesar tu pedido.</p>
+  </div>
+</header>
+
+<main class="container py-5">
+  <div class="row">
+    <div class="col-lg-8">
+
+      <div class="mb-3 d-flex flex-wrap gap-3 leyenda-clasif">
+        <span><span class="dot" style="background:var(--tag-publico)"></span><span data-i18n="privacy_public">Público</span></span>
+        <span><span class="dot" style="background:var(--tag-semiprivado)"></span><span data-i18n="privacy_semiprivate">Semiprivado</span></span>
+        <span><span class="dot" style="background:var(--tag-privado)"></span><span data-i18n="privacy_private">Privado</span></span>
+        <span><span class="dot" style="background:var(--tag-sensible)"></span><span data-i18n="privacy_sensitive">Sensible</span></span>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label small text-muted" data-i18n="registration_backend_url">URL del backend</label>
+        <input type="text" id="apiBase" class="form-control form-control-sm" style="max-width:340px;" value="http://localhost:8080">
+      </div>
+
+      <form id="form-registro" novalidate>
+
+        <h2 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:.08em;" data-i18n="registration_section_entity">1. Datos de la entidad</h2>
+
+        <div class="field-ficha publico">
+          <span class="clasif-badge publico" data-i18n="privacy_public">Público</span>
+          <label class="form-label" data-i18n="registration_unit_name">Nombre de la unidad / instalación</label>
+          <input type="text" id="nombreUnidad" class="form-control" placeholder="Ej. Estación de Policía Norte" data-i18n-placeholder="registration_unit_placeholder" required>
+          <div class="form-text" data-i18n="registration_public_note">Consta en registros públicos institucionales — no requiere autorización especial.</div>
+        </div>
+
+        <div class="field-ficha publico">
+          <span class="clasif-badge publico" data-i18n="privacy_public">Público</span>
+          <label class="form-label" data-i18n="registration_official_address">Dirección de la instalación oficial</label>
+          <input type="text" id="direccionInstalacion" class="form-control" placeholder="Dirección de la sede" data-i18n-placeholder="registration_address_placeholder" required>
+        </div>
+
+        <h2 class="h6 text-uppercase text-muted mb-3 mt-4" style="letter-spacing:.08em;" data-i18n="registration_section_commercial">2. Datos comerciales</h2>
+
+        <div class="field-ficha semiprivado">
+          <span class="clasif-badge semiprivado" data-i18n="privacy_semiprivate">Semiprivado</span>
+          <label class="form-label" data-i18n="registration_tax_id">NIT / código presupuestal</label>
+          <input type="text" id="nit" class="form-control" placeholder="900.XXX.XXX-X" required>
+          <div class="form-text" data-i18n="registration_commercial_note">Interesa a la relación comercial (facturación, cumplimiento de pago).</div>
+        </div>
+
+        <h2 class="h6 text-uppercase text-muted mb-3 mt-4" style="letter-spacing:.08em;" data-i18n="registration_section_official">3. Datos del funcionario responsable</h2>
+
+        <div class="field-ficha privado">
+          <span class="clasif-badge privado" data-i18n="privacy_private">Privado</span>
+          <label class="form-label" data-i18n="registration_official_name">Nombre completo del funcionario que gestiona la compra</label>
+          <input type="text" id="nombreFuncionario" class="form-control" required>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="field-ficha privado">
+              <span class="clasif-badge privado" data-i18n="privacy_private">Privado</span>
+              <label class="form-label" data-i18n="registration_email">Correo electrónico</label>
+              <input type="email" id="correo" class="form-control" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="field-ficha privado">
+              <span class="clasif-badge privado" data-i18n="privacy_private">Privado</span>
+              <label class="form-label" data-i18n="registration_phone">Teléfono de contacto</label>
+              <input type="tel" id="telefono" class="form-control" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-ficha privado">
+          <span class="clasif-badge privado" data-i18n="privacy_private">Privado</span>
+          <label class="form-label" data-i18n="registration_delivery_address">Dirección de entrega (si difiere de la instalación oficial)</label>
+          <input type="text" id="direccionEntrega" class="form-control">
+        </div>
+
+        <h2 class="h6 text-uppercase text-muted mb-3 mt-4" style="letter-spacing:.08em;" data-i18n="registration_section_security">4. Verificación de seguridad</h2>
+
+        <div class="aviso-sensible mb-3" data-i18n="registration_security_notice">
+          Este campo aplica un tratamiento especial: la empresa solo lo solicita porque parte del catálogo
+          corresponde a equipo restringido, cuya entrega exige verificar que quien lo recibe está autorizado
+          para manipularlo. No se solicita para ningún otro fin.
+        </div>
+
+        <div class="field-ficha sensible">
+          <span class="clasif-badge sensible" data-i18n="privacy_sensitive">Sensible</span>
+          <label class="form-label" data-i18n="registration_background_check">Certificado o número de consulta de antecedentes judiciales del funcionario receptor</label>
+          <input type="text" id="numeroConsulta" class="form-control" placeholder="Número de consulta ante Policía Nacional / Procuraduría" data-i18n-placeholder="registration_background_placeholder">
+          <div class="form-text" data-i18n="registration_background_note">Requerido únicamente para pedidos que incluyan equipo táctico restringido (categoría "Equipo táctico" del catálogo).</div>
+        </div>
+
+        <div class="p-3 mb-3" style="background:rgba(139,46,46,0.06); border:1px solid var(--tag-sensible); border-radius:2px;">
+          <p class="small mb-2"><strong data-i18n="registration_legal_notice">Aviso legal — dato de tratamiento especial (Art. 6, Ley 1581 de 2012 y Decreto 1377 de 2013):</strong></p>
+          <ul class="small mb-2">
+            <li><strong>Finalidad exclusiva:</strong> verificar que el funcionario que recibe equipo restringido está autorizado para manipularlo.</li>
+            <li><strong>Carácter:</strong> no es obligatorio para registrarte ni para comprar productos de dotación u oficina.</li>
+            <li><strong>Consecuencia de no autorizar:</strong> si el pedido incluye equipo restringido y no autorizas este dato, no podremos procesar la entrega de esos artículos específicos; el resto del pedido no se ve afectado.</li>
+            <li><strong>Acceso:</strong> visible únicamente para el área de cumplimiento y seguridad.</li>
+          </ul>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="autorizacion_sensible">
+            <label class="form-check-label small" for="autorizacion_sensible" data-i18n="registration_sensitive_consent">
+              Autorizo expresa y voluntariamente el tratamiento de mi dato de antecedentes judiciales/de seguridad,
+              exclusivamente para la finalidad de verificación descrita arriba.
+            </label>
+          </div>
+        </div>
+
+        <h2 class="h6 text-uppercase text-muted mb-3 mt-4" style="letter-spacing:.08em;" data-i18n="registration_section_access">5. Crea tu acceso</h2>
+
+        <div class="field-ficha privado">
+          <span class="clasif-badge privado" data-i18n="privacy_private">Privado</span>
+          <label class="form-label" data-i18n="registration_password">Contraseña de acceso</label>
+          <input type="password" id="password" class="form-control" minlength="8" required>
+          <div class="form-text" data-i18n="registration_password_note">Mínimo 8 caracteres. Se guarda cifrada de forma irreversible (hash), nunca en texto plano — ni siquiera el equipo de soporte puede verla.</div>
+        </div>
+
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" id="autorizacion" required>
+          <label class="form-check-label small" for="autorizacion">
+            Autorizo el tratamiento de mis datos personales <strong>generales</strong> (público, semiprivado y privado)
+            conforme a la <a href="#" data-bs-toggle="modal" data-bs-target="#modalPolitica">Política de Tratamiento de Datos</a>,
+            para los fines de gestión comercial, logística y facturación descritos en ella.
+          </label>
+        </div>
+
+        <div id="registro-mensaje" class="mb-3" style="display:none;"></div>
+
+        <button type="submit" id="btn-registrar" class="btn btn-dark px-4" data-i18n="registration_submit">Registrar cliente</button>
+      </form>
+
+    </div>
+
+    <div class="col-lg-4">
+      <div class="p-4" style="background:var(--paper-50); border:1px solid rgba(11,35,64,0.12);">
+        <h3 class="h6" data-i18n="registration_why_title">¿Por qué clasificamos cada dato?</h3>
+        <p class="small text-muted" data-i18n="registration_why_text">
+          La Ley 1581 de 2012 exige un tratamiento diferenciado según el nivel de sensibilidad de la información.
+          Marcar cada campo con su clasificación permite auditar qué se recolecta, por qué, y aplicar el nivel
+          de acceso y cifrado correcto en el backend para cada categoría.
+        </p>
+        <p class="small text-muted mb-0" data-i18n="registration_storage_text">
+          Los datos <strong>privados</strong> se almacenan cifrados en reposo. Los <strong>semiprivados</strong>
+          son visibles también para contabilidad. Los <strong>públicos</strong> no requieren restricción.
+          Los <strong>sensibles</strong> (antecedentes judiciales) se guardan en una tabla aparte, cifrada,
+          visible solo para cumplimiento y seguridad.
+        </p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="institucional py-4">
+  <div class="container d-flex flex-wrap justify-content-between small">
+    <span data-i18n="footer_rights">© 2026 Suministros Institucionales S.A.S.</span>
+    <span data-i18n="footer_privacy">Tratamiento de datos conforme a la Ley 1581 de 2012</span>
+  </div>
+</footer>
+
+<!-- Modal política de datos -->
+<div class="modal fade" id="modalPolitica" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" data-i18n="registration_policy_title">Política de tratamiento de datos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body small">
+        <p data-i18n="registration_policy_intro">Suministros Institucionales S.A.S. actúa como responsable del tratamiento de los datos personales
+        recolectados en este formulario, conforme a la Ley 1581 de 2012 y el Decreto 1377 de 2013.</p>
+        <p><strong data-i18n="registration_policy_purpose">Finalidad:</strong> gestión de pedidos, facturación, logística de entrega y atención al cliente.</p>
+        <p><strong data-i18n="registration_policy_sensitive">Datos de tratamiento especial:</strong> únicamente para pedidos de equipo táctico restringido,
+        se solicita el número de consulta de antecedentes judiciales del funcionario receptor, bajo consentimiento
+        separado, expreso y voluntario.</p>
+        <p><strong data-i18n="registration_policy_rights">Derechos del titular:</strong> conocer, actualizar, rectificar y solicitar la supresión de sus
+        datos en cualquier momento, escribiendo a datos@suministrosinstitucionales.co</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="chatbot-toggle" onclick="cbToggle()" title="Atención al cliente" data-i18n="chat_title">💬</div>
+<div id="chatbot-panel">
+  <div class="cb-header">
+    <span data-i18n="chat_title">Atención al cliente</span>
+    <span style="cursor:pointer;" onclick="cbToggle()">✕</span>
+  </div>
+  <div class="cb-body" id="cb-body">
+    <div class="cb-msg bot" data-i18n="registration_chat_greeting">Hola, soy el asistente virtual. ¿Tienes dudas sobre el registro o el tratamiento de tus datos?</div>
+  </div>
+  <div class="cb-quick cb-quick-start">
+    <button data-q="¿Cómo protegen mis datos?" data-i18n="chat_quick3">Protección de datos</button>
+  </div>
+  <div class="cb-input">
+    <input type="text" id="cb-input-text" placeholder="Escribe tu mensaje..." data-i18n-placeholder="chat_placeholder">
+    <button onclick="cbEnviar()" data-i18n="chat_send">Enviar</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/chatbot.js"></script>
+<script src="navbar.js"></script>
+
+<script>
+const form = document.getElementById('form-registro');
+const btn = document.getElementById('btn-registrar');
+const mensaje = document.getElementById('registro-mensaje');
+
+function mostrarMensaje(texto, tipo) {
+  mensaje.textContent = texto;
+  mensaje.className = 'mb-3 alert alert-' + tipo;
+  mensaje.style.display = 'block';
+}
+
+form.addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+
+  const apiBase = document.getElementById('apiBase').value.replace(/\/$/, '');
+  const numeroConsulta = document.getElementById('numeroConsulta').value.trim();
+  const autorizacionSensible = document.getElementById('autorizacion_sensible').checked;
+  const correo = document.getElementById('correo').value;
+  const password = document.getElementById('password').value;
+
+  const payload = {
+    nombreUnidad: document.getElementById('nombreUnidad').value,
+    direccionInstalacion: document.getElementById('direccionInstalacion').value,
+    nit: document.getElementById('nit').value,
+    nombreFuncionario: document.getElementById('nombreFuncionario').value,
+    correo: correo,
+    telefono: document.getElementById('telefono').value,
+    direccionEntrega: document.getElementById('direccionEntrega').value,
+    autorizacionGeneral: document.getElementById('autorizacion').checked
+  };
+
+  btn.disabled = true;
+  btn.textContent = 'Registrando...';
+  mensaje.style.display = 'none';
+
+  try {
+    // 1. Registrar los datos del cliente (institucionales)
+    const respCliente = await fetch(apiBase + '/api/clientes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!respCliente.ok) throw new Error('El servidor respondió con error ' + respCliente.status);
+    const cliente = await respCliente.json();
+
+    // 2. Registrar el dato sensible (antecedentes), solo si autorizó
+    if (autorizacionSensible && numeroConsulta) {
+      await fetch(apiBase + '/api/clientes/' + cliente.id + '/dato-sensible', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numeroConsultaAntecedentes: numeroConsulta, autorizacionSensible: true })
+      });
+    }
+
+    // 3. Crear la cuenta de acceso (correo + contraseña) vinculada al cliente
+    const respAuth = await fetch(apiBase + '/api/auth/registro', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ correo, password, clienteId: cliente.id })
+    });
+    const datosAuth = await respAuth.json();
+    if (!respAuth.ok) throw new Error(datosAuth.error || 'El cliente se registró, pero no se pudo crear el acceso');
+
+    // 4. Autologin: guarda la sesión y redirige (respeta ?redirect= si venía del carrito)
+    authGuardar({ token: datosAuth.token, correo: datosAuth.correo, clienteId: cliente.id, rol: datosAuth.rol });
+    mostrarMensaje('Cuenta creada correctamente. Redirigiendo...', 'success');
+    const params = new URLSearchParams(window.location.search);
+    setTimeout(() => { window.location.href = params.get('redirect') || 'index.html'; }, 1200);
+  } catch (err) {
+    mostrarMensaje(
+      'No se pudo completar el registro. Verifica que el backend esté corriendo en ' + apiBase + '. Detalle: ' + err.message,
+      'danger'
+    );
+    btn.disabled = false;
+    btn.textContent = 'Registrar cliente';
+  }
+});
+</script>
+</body>
+</html>

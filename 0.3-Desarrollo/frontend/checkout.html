@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout — Suministros Institucionales</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  /* ── Métodos de pago ── */
+  .metodo-pago {
+    border: 2px solid rgba(11,35,64,0.15);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    cursor: pointer;
+    transition: border-color .18s, background .18s;
+    user-select: none;
+  }
+  .metodo-pago:hover { border-color: var(--brass-600, #b08d57); }
+  .metodo-pago.seleccionado {
+    border-color: var(--brass-600, #b08d57);
+    background: rgba(176,141,87,0.07);
+  }
+  .metodo-pago input[type="radio"] {
+    accent-color: var(--brass-600, #b08d57);
+    margin-right: .6rem;
+  }
+  .metodo-logo { font-size: 1.4rem; margin-right: .5rem; }
+  .metodo-pago strong { font-size: .97rem; }
+  .metodo-pago small  { color: #6c757d; }
+
+  /* ── Pasos ── */
+  .paso-titulo {
+    font-size: .72rem; text-transform: uppercase;
+    letter-spacing: .07em; color: #6c757d;
+    display: flex; align-items: center;
+    margin-bottom: .75rem; margin-top: 1.5rem;
+  }
+  .paso-numero {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.6rem; height: 1.6rem; border-radius: 50%;
+    background: var(--navy-900, #0b2340); color: #fff;
+    font-size: .72rem; font-weight: 700; margin-right: .5rem;
+  }
+
+  /* ── Resumen ── */
+  .resumen-card {
+    background: var(--paper-50, #fafaf7);
+    border: 1px solid rgba(11,35,64,0.12);
+    border-radius: 10px;
+    padding: 1.4rem;
+    position: sticky; top: 1.5rem;
+  }
+  .precio-total {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.3rem; font-weight: 700;
+    color: var(--navy-900, #0b2340);
+  }
+
+  /* ── Overlay procesando ── */
+  #overlay-procesando {
+    position: fixed; inset: 0;
+    background: rgba(11,35,64,0.90);
+    color: #fff; display: none;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 1rem;
+    z-index: 2000; text-align: center; padding: 2rem;
+  }
+  .overlay-titulo { font-size: 1.15rem; font-weight: 600; }
+  .overlay-sub    { font-size: .88rem;  opacity: .75; }
+
+  /* ── Resultados ── */
+  .resultado-aprobado {
+    background: #d1fae5; border: 1px solid #6ee7b7;
+    color: #065f46; border-radius: 10px; padding: 2rem 1.5rem;
+  }
+  .resultado-rechazado {
+    background: #fee2e2; border: 1px solid #fca5a5;
+    color: #991b1b; border-radius: 10px; padding: 1.2rem 1.5rem;
+  }
+  .resultado-pendiente {
+    background: #fef3c7; border: 1px solid #fcd34d;
+    color: #92400e; border-radius: 10px; padding: 2rem 1.5rem;
+  }
+
+  /* ── Aviso restringido ── */
+  .aviso-sensible {
+    background: rgba(139,46,46,0.06);
+    border: 1px solid var(--tag-sensible, #8b2e2e);
+    border-radius: 6px; padding: .75rem 1rem;
+    font-size: .85rem; color: #5a1e1e;
+  }
+  .aviso-sensible a { color: #8b2e2e; }
+
+  /* ── SSL badge ── */
+  .badge-ssl {
+    display: inline-flex; align-items: center; gap: .3rem;
+    font-size: .75rem; padding: .25rem .65rem;
+    border-radius: 20px; background: #d1fae5; color: #065f46;
+  }
+  .badge-ssl.azul { background: #dbeafe; color: #1e40af; }
+
+  /* ── Sección tarjeta / PSE ── */
+  .seccion-metodo {
+    background: var(--paper-50, #fafaf7);
+    border: 1px solid rgba(11,35,64,0.12);
+    border-radius: 8px; padding: 1.1rem 1.2rem;
+    margin-bottom: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════ NAV ════════════════════ -->
+<nav class="navbar navbar-expand-lg navbar-institucional py-3">
+  <div class="container">
+    <a class="navbar-brand" href="index.html">
+      <span>Suministros Institucionales</span>
+    </a>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav ms-auto gap-lg-3 align-items-lg-center">
+        <li class="nav-item"><a class="nav-link" href="index.html">← Catálogo</a></li>
+        <li class="nav-item d-flex align-items-center" id="auth-nav-slot"></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- ════════════════════ HERO ════════════════════ -->
+<header class="hero py-4">
+  <div class="container py-2">
+    <div class="eyebrow mb-1">Paso final · Compra segura</div>
+    <h1 class="display-serif h3 mb-2">Finalizar pedido</h1>
+    <div class="d-flex flex-wrap gap-2">
+      <span class="badge-ssl">🔒 Conexión cifrada SSL</span>
+      <span class="badge-ssl azul">🏦 Pasarela de pago integrada</span>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════════ MAIN ════════════════════ -->
+<main class="container py-5">
+
+  <!-- Carrito vacío -->
+  <div id="checkout-vacio" class="text-center py-5" style="display:none;">
+    <div style="font-size:3.5rem;">🛒</div>
+    <h2 class="h5 mt-3">Tu carrito está vacío</h2>
+    <p class="text-muted">Agrega productos antes depagar  <a href="index.html" class="btn btn-dark mt-2">Ir al catálogo</a>
+  </div>
+
+  <!-- Resultado del pago (aparece tras procesar) -->
+  <div id="resultado-pago" style="display:none;" class="mb-4"></div>
+
+  <!-- Formulario principal -->
+  <div id="checkout-contenido" class="row g-5" style="display:none;">
+
+    <!-- ── Col izquierda ── -->
+    <div class="col-lg-7">
+
+      <!-- Paso 1: Dirección -->
+      <div class="paso-titulo" style="margin-top:0;">
+        <span class="paso-numero">1</span> Dirección de entrega
+      </div>
+      <div class="mb-2">
+        <label class="form-label small">Dirección completa de la instalación</label>
+        <input type="text" id="direccionEntrega" class="form-control"
+          placeholder="Ej. Cra 7 # 32-16, Bogotá D.C." required>
+        <div class="form-text">Puedes modificar la dirección solo para este pedido.</div>
+      </div>
+      <div id="aviso-restringido-checkout" class="aviso-sensible mb-3" style="display:none;">
+        ⚠️ Tu pedido incluye <strong>equipo táctico restringido</strong>. Para procesar la entrega
+        necesitas tener registrada la autorización de antecedentes en tu
+        <a href="registro.html">ficha de cliente</a>.
+      </div>
+
+      <!-- Paso 2: Método de pago -->
+      <div class="paso-titulo">
+        <span class="paso-numero">2</span> Método de pago
+      </div>
+      <div class="d-flex flex-column gap-3 mb-3" id="metodos-pago">
+
+        <label class="metodo-pago d-flex align-items-center">
+          <input type="radio" name="metodoPago" value="PSE" checked>
+          <span class="metodo-logo">🏦</span>
+          <span>
+            <strong>PSE</strong> — Pagos Seguros en Línea
+            <br><small>Débito bancario · Bancolombia, Davivienda, BBVA y más</small>
+          </span>
+        </label>
+
+        <label class="metodo-pago d-flex align-items-center">
+          <input type="radio" name="metodoPago" value="TARJETA">
+          <span class="metodo-logo">💳</span>
+          <span>
+            <strong>Tarjeta de crédito / débito</strong>
+            <br><small>Visa · MasterCard · American Express</small>
+          </span>
+        </label>
+
+        <label class="metodo-pago d-flex align-items-center">
+          <input type="radio" name="metodoPago" value="NEQUI">
+          <span class="metodo-logo">📱</span>
+          <span>
+            <strong>Nequi</strong>
+            <br><small>Pago desde la app Nequi</small>
+          </span>
+        </label>
+
+        <label class="metodo-pago d-flex align-items-center">
+          <input type="radio" name="metodoPago" value="DAVIPLATA">
+          <span class="metodo-logo">📲</span>
+          <span>
+            <strong>Daviplata</strong>
+            <br><small>Pago desde la app Daviplata</small>
+          </span>
+        </label>
+
+        <label class="metodo-pago d-flex align-items-center">
+          <input type="radio" name="metodoPago" value="CONTRAENTREGA">
+          <span class="metodo-logo">🏠</span>
+          <span>
+            <strong>Pago contra entrega</strong>
+            <br><small>Pagas cuando recibes el pedido en la instalación</small>
+          </span>
+        </label>
+
+      </div>
+
+      <!-- Panel PSE -->
+      <div id="seccion-pse" class="seccion-metodo">
+        <p class="small text-muted mb-2">
+          🔒 Serás redirigido a la pasarela de tu banco para autorizar el débito de forma segura.
+        </p>
+        <div class="mb-2">
+          <label class="form-label small">Banco</label>
+          <select id="pseBanco" class="form-select">
+            <option value="">— Selecciona tu banco —</option>
+            <option value="bancolombia">Bancolombia</option>
+            <option value="davivienda">Davivienda</option>
+            <option value="bbva">BBVA</option>
+            <option value="bogota">Banco de Bogotá</option>
+            <option value="occidente">Banco de Occidente</option>
+            <option value="popular">Banco Popular</option>
+            <option value="itau">Itaú</option>
+            <option value="scotiabank">Scotiabank Colpatria</option>
+            <option value="nacion">Banco de la Nación</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label small">Tipo de cuenta</label>
+          <select id="pseTipoCuenta" class="form-select">
+            <option value="ahorros">Ahorros</option>
+            <option value="corriente">Corriente</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Panel Tarjeta -->
+      <div id="seccion-tarjeta" class="seccion-metodo" style="display:none;">
+        <p class="small text-muted mb-2">🔒 Datos cifrados con TLS 1.3 — nunca almacenamos tu número de tarjeta.</p>
+        <div class="mb-2">
+          <label class="form-label small">Número de tarjeta</label>
+          <input type="text" id="tarjetaNumero" class="form-control"
+            placeholder="0000 0000 0000 0000" maxlength="19" inputmode="numeric">
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <label class="form-label small">Vencimiento</label>
+            <input type="text" id="tarjetaVencimiento" class="form-control"
+              placeholder="MM/AA" maxlength="5">
+          </div>
+          <div class="col-6">
+            <label class="form-label small">CVV</label>
+            <input type="text" id="tarjetaCvv" class="form-control"
+              placeholder="123" maxlength="4" inputmode="numeric">
+          </div>
+        </div>
+        <div>
+          <label class="form-label small">Nombre del titular</label>
+          <input type="text" id="tarjetaTitular" class="form-control"
+            placeholder="Como aparece en la tarjeta">
+        </div>
+      </div>
+
+      <!-- Panel Nequi -->
+      <div id="seccion-nequi" class="seccion-metodo" style="display:none;">
+        <p class="small text-muted mb-0">
+          📱 Recibirás una notificación push en tu app Nequi para autorizar el pago.
+          Asegúrate de tener el número de celular registrado en tu cuenta Nequi disponible.
+        </p>
+      </div>
+
+      <!-- Panel Daviplata -->
+      <div id="seccion-daviplata" class="seccion-metodo" style="display:none;">
+        <p class="small text-muted mb-0">
+          📲 Recibirás un mensaje en tu app Daviplata para confirmar el pago.
+          Asegúrate de tener saldo disponible en tu cuenta.
+        </p>
+      </div>
+
+      <!-- Panel Contra entrega -->
+      <div id="seccion-contraentrega" class="seccion-metodo" style="display:none;">
+        <p class="small text-muted mb-0">
+          🏠 El pago se realiza en efectivo o por transferencia al momento de recibir el pedido
+          en la instalación. Asegúrate de que el funcionario receptor tenga disponibilidad para pagar.
+        </p>
+      </div>
+
+      <!-- Error -->
+      <div id="checkout-error" class="alert alert-danger small mb-3" style="display:none;" role="alert"></div>
+
+      <!-- Botón pagar -->
+      <button id="btn-pagar" class="btn btn-dark w-100 py-3"
+        style="font-size:1.05rem; font-weight:600; letter-spacing:.02em;">
+        Pagar
+      </button>
+      <p class="text-center text-muted small mt-2 mb-0">
+        Al confirmar, aceptas nuestros <a href="#">términos</a> y la
+        <a href="registro.html">política de datos</a>.
+      </p>
+    </div>
+
+    <!-- ── Col derecha: resumen ── -->
+    <div class="col-lg-5">
+      <div class="resumen-card">
+        <h3 class="h6 mb-3" style="color:var(--navy-900,#0b2340); font-weight:700;">
+          📦 Resumen del pedido
+        </h3>
+        <div id="resumen-items" class="mb-3 small"></div>
+        <hr class="my-2">
+        <div class="d-flex justify-content-between small mb-1">
+          <span class="text-muted">Subtotal</span>
+          <span id="resumen-subtotal">$0</span>
+        </div>
+        <div class="d-flex justify-content-between small mb-2">
+          <span class="text-muted">Envío</span>
+          <span class="text-success fw-semibold">Gratis</span>
+        </div>
+        <hr class="my-2">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Total a pagar</span>
+          <span id="resumen-total" class="precio-total">$0</span>
+        </div>
+        <div class="mt-3 pt-3 border-top small text-muted">
+          🕐 Entrega estimada: <strong class="text-dark">3–5 días hábiles</strong>
+          a la instalación registrada.
+        </div>
+        <div class="mt-3">
+          <a href="index.html" class="btn btn-sm btn-outline-secondary w-100">
+            ← Seguir comprando
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /checkout-contenido -->
+</main>
+
+<!-- ════════════════════ OVERLAY ════════════════════ -->
+<div id="overlay-procesando">
+  <div class="spinner-border mb-2" style="width:2.8rem;height:2.8rem;" role="status"></div>
+  <div class="overlay-titulo" id="overlay-titulo">Procesando pago...</div>
+  <div class="overlay-sub"   id="overlay-sub">Por favor no cierres esta ventana</div>
+</div>
+
+<footer class="institucional py-4">
+  <div class="container d-flex flex-wrap justify-content-between small">
+    <span>© 2026 Suministros Institucionales S.A.S.</span>
+    <span>Compra segura · Cifrado SSL · Ley 1581 de 2012</span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/i18n.js"></script>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   CHECKOUT — lógica principal
+═══════════════════════════════════════════════════════ */
+
+// ── Helpers ───────────────────────────────────────────
+function fmt(valor) {
+  return '$' + (Number(valor) || 0).toLocaleString('es-CO');
+}
+function mostrarError(msg) {
+  const el = document.getElementById('checkout-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function ocultarError() {
+  document.getElementById('checkout-error').style.display = 'none';
+}
+function mostrarOverlay(titulo, sub) {
+  document.getElementById('overlay-titulo').textContent = titulo;
+  document.getElementById('overlay-sub').textContent    = sub || 'Por favor no cierres esta ventana';
+  document.getElementById('overlay-procesando').style.display = 'flex';
+}
+function ocultarOverlay() {
+  document.getElementById('overlay-procesando').style.display = 'none';
+}
+
+// ── Verificar sesión ──────────────────────────────────
+if (!authEstaLogueado()) {
+  window.location.href = 'login.html?redirect=checkout.html';
+}
+
+// ── Leer carrito ──────────────────────────────────────
+const items = carritoLeer();
+
+// ── Inicializar página ────────────────────────────────
+(function init() {
+  if (!items.length) {
+    document.getElementById('checkout-vacio').style.display = 'block';
+    return;
+  }
+  document.getElementById('checkout-contenido').style.display = '';
+
+  // Aviso equipo restringido
+  if (items.some(i => i.restringido)) {
+    document.getElementById('aviso-restringido-checkout').style.display = 'block';
+  }
+
+  // Resumen
+  const total = items.reduce((a, i) => a + i.precio * i.cantidad, 0);
+  document.getElementById('resumen-items').innerHTML = items.map(i => `
+    <div class="d-flex justify-content-between mb-1">
+      <span>${i.nombre} <span class="badge rounded-pill bg-secondary" style="font-size:.6rem;">${i.cantidad}</span></span>
+      <span class="fw-semibold">${fmt(i.precio * i.cantidad)}</span>
+    </div>`).join('');
+  document.getElementById('resumen-subtotal').textContent = fmt(total);
+  document.getElementById('resumen-total').textContent    = fmt(total);
+
+  // Pre-rellenar dirección desde sesión si está guardada
+  const sesion = authLeer();
+  if (sesion?.direccionEntrega) {
+    document.getElementById('direccionEntrega').value = sesion.direccionEntrega;
+  }
+})();
+
+// ── Mapa de paneles por método ────────────────────────
+const PANELES = {
+  PSE:            'seccion-pse',
+  TARJETA:        'seccion-tarjeta',
+  NEQUI:          'seccion-nequi',
+  DAVIPLATA:      'seccion-daviplata',
+  CONTRAENTREGA:  'seccion-contraentrega',
+};
+
+function mostrarPanel(metodo) {
+  Object.values(PANELES).forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  const panelId = PANELES[metodo];
+  if (panelId) document.getElementById(panelId).style.display = 'block';
+}
+
+// ── Selección método de pago ──────────────────────────
+document.querySelectorAll('.metodo-pago').forEach(label => {
+  label.addEventListener('click', () => {
+    document.querySelectorAll('.metodo-pago').forEach(l => l.classList.remove('seleccionado'));
+    label.classList.add('seleccionado');
+    const val = label.querySelector('input[type="radio"]')?.value;
+    mostrarPanel(val);
+  });
+});
+// PSE seleccionado por defecto
+document.querySelector('.metodo-pago')?.classList.add('seleccionado');
+mostrarPanel('PSE');
+
+// ── Formato automático tarjeta ────────────────────────
+document.getElementById('tarjetaNumero')?.addEventListener('input', function () {
+  this.value = this.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim().slice(0, 19);
+});
+document.getElementById('tarjetaVencimiento')?.addEventListener('input', function () {
+  this.value = this.value.replace(/\D/g, '').replace(/^(\d{2})(\d)/, '$1/$2').slice(0, 5);
+});
+document.getElementById('tarjetaCvv')?.addEventListener('input', function () {
+  this.value = this.value.replace(/\D/g, '');
+});
+
+// ── Validar campos según método ───────────────────────
+function validarMetodo(metodo) {
+  if (metodo === 'PSE') {
+    if (!document.getElementById('pseBanco').value) {
+      mostrarError('Selecciona tu banco para pagar.');
+      return false;
+    }
+  }
+  if (metodo === 'TARJETA') {
+    const num  = document.getElementById('tarjetaNumero').value.replace(/\s/g, '');
+    const venc = document.getElementById('tarjetaVencimiento').value;
+    const cvv  = document.getElementById('tarjetaCvv').value;
+    const tit  = document.getElementById('tarjetaTitular').value.trim();
+    if (num.length < 13)              { mostrarError('Ingresa un número de tarjeta válido.'); return false; }
+    if (!/^\d{2}\/\d{2}$/.test(venc)){ mostrarError('Ingresa la fecha en formato MM/AA.');   return false; }
+    if (cvv.length < 3)               { mostrarError('Ingresa el CVV de la tarjeta.');        return false; }
+    if (!tit)                         { mostrarError('Ingresa el nombre del titular.');        return false; }
+  }
+  return true;
+}
+
+// ── Simular pasarela de pago ──────────────────────────
+// 90% aprobado · 5% rechazado · 5% pendiente
+// Reemplaza esta función con la SDK de PayU / MercadoPago / Kushki / ePayco
+// cuando tengas las credenciales del proveedor.
+function simularPasarela(metodo) {
+  return new Promise(resolve => {
+    const r = Math.random();
+    setTimeout(() => {
+      if      (r < 0.90) resolve({ estado: 'aprobado',  ref: 'REF-' + Date.now() });
+      else if (r < 0.95) resolve({ estado: 'rechazado', ref: null });
+      else               resolve({ estado: 'pendiente', ref: 'PND-' + Date.now() });
+    }, 2200);
+  });
+}
+
+// ── Registrar pedido en el backend ───────────────────
+async function registrarPedido(sesion, direccion, metodo, referencia) {
+  try {
+    const resp = await fetch(API_BASE + '/api/pedidos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + sesion.token
+      },
+      body: JSON.stringify({
+        items: items.map(i => ({
+          productoId: i.id,          // ← usa i.id (el carrito guarda 'id', no 'productoId')
+          nombre:     i.nombre,
+          cantidad:   i.cantidad,
+          precio:     i.precio
+        })),
+        direccionEntrega: direccion,
+        metodoPago:       metodo,
+        referenciaPago:   referencia,
+        total: items.reduce((s, i) => s + i.precio * i.cantidad, 0)
+      })
+    });
+    const data = await resp.json().catch(() => ({}));
+    return resp.ok ? { ok: true, id: data.id } : { ok: false, error: data.error || 'HTTP ' + resp.status };
+  } catch (err) {
+    // Sin backend disponible: pagarmodo demo)
+    return { ok: false, local: true, id: 'LOCAL-' + Date.now() };
+  }
+}
+
+// ── Botón PAGAR ───────────────────────────────────────
+document.getElementById('btn-pagar').addEventListener('click', async () => {
+  ocultarError();
+  if (!items.length) return;
+
+  const direccion = document.getElementById('direccionEntrega').value.trim();
+  if (!direccion) {
+    mostrarError('La dirección de entrega es obligatoria.');
+    document.getElementById('direccionEntrega').focus();
+    return;
+  }
+
+  const metodo = document.querySelector('input[name="metodoPago"]:checked')?.value || 'PSE';
+  if (!validarMetodo(metodo)) return;
+
+  // Renovar token si es necesario
+  const sesionValida = await authAsegurarTokenValido();
+  if (!sesionValida) {
+    window.location.href = 'login.html?redirect=checkout.html';
+    return;
+  }
+  const sesion = authLeer();
+
+  const btn = document.getElementById('btn-pagar');
+  btn.disabled = true;
+
+  try {
+    // Paso 1: conectando con pasarela
+    mostrarOverlay('Conectando con ' + metodo + '...', 'Verificando disponibilidad de productos');
+    await new Promise(r => setTimeout(r, 700));
+
+    // Paso 2: procesando pago (simulado)
+    mostrarOverlay('Procesando pago con ' + metodo + '...', 'No cierres ni recargues esta ventana');
+    const resultado = await simularPasarela(metodo);
+
+    ocultarOverlay();
+
+    const resultadoEl   = document.getElementById('resultado-pago');
+    const contenidoEl   = document.getElementById('checkout-contenido');
+
+    // ── APROBADO ──────────────────────────────────────
+    if (resultado.estado === 'aprobado') {
+      mostrarOverlay('Registrando tu pedido...', 'Ya casi terminamos');
+      const pedido = await registrarPedido(sesion, direccion, metodo, resultado.ref);
+      ocultarOverlay();
+
+      carritoVaciar();
+
+      contenidoEl.style.display   = 'none';
+      resultadoEl.style.display   = 'block';
+      resultadoEl.innerHTML = `
+        <div class="resultado-aprobado text-center">
+          <div style="font-size:3.5rem;">✅</div>
+          <h2 class="h4 mt-3 mb-2">¡Pago aprobado!</h2>
+          <p class="mb-1">Tu pedido fue registrado exitosamente.</p>
+          <p class="small mb-0 opacity-75">
+            Referencia: <strong>${resultado.ref}</strong>
+            ${pedido.id ? ' · Pedido #' + pedido.id : ''}
+          </p>
+          <hr class="my-3">
+          <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a href="historial.html" class="btn btn-dark">Ver mis pedidos</a>
+            <a href="index.html"     class="btn btn-outline-secondary">Seguir comprando</a>
+          </div>
+          <p class="small text-muted mt-3 mb-0">Redirigiendo a tu historial en <span id="cuenta-regresiva">5</span> s...</p>
+        </div>`;
+
+      // Cuenta regresiva y redirección automática
+      let seg = 5;
+      const intervalo = setInterval(() => {
+        seg--;
+        const el = document.getElementById('cuenta-regresiva');
+        if (el) el.textContent = seg;
+        if (seg <= 0) { clearInterval(intervalo); window.location.href = 'historial.html'; }
+      }, 1000);
+    }
+
+    // ── RECHAZADO ─────────────────────────────────────
+    else if (resultado.estado === 'rechazado') {
+      resultadoEl.style.display = 'block';
+      resultadoEl.innerHTML = `
+        <div class="resultado-rechazado mb-4">
+          <strong>❌ Pago rechazado</strong><br>
+          <span class="small">Tu entidad financiera rechazó la transacción.
+          Verifica los datos o intenta con otro método de pago.</span>
+        </div>`;
+      btn.disabled = false;
+    }
+
+    // ── PENDIENTE ─────────────────────────────────────
+    else {
+      mostrarOverlay('Registrando tu pedido...', 'Ya casi terminamos');
+      const pedido = await registrarPedido(sesion, direccion, metodo, resultado.ref);
+      ocultarOverlay();
+
+      carritoVaciar();
+      contenidoEl.style.display = 'none';
+      resultadoEl.style.display = 'block';
+      resultadoEl.innerHTML = `
+        <div class="resultado-pendiente text-center">
+          <div style="font-size:3.5rem;">⏳</div>
+          <h2 class="h4 mt-3 mb-2">Pago en revisión</h2>
+          <p class="mb-1">Tu pago está pendiente de confirmación por tu banco.</p>
+          <p class="small mb-0 opacity-75">Referencia: <strong>${resultado.ref}</strong>
+          ${pedido.id ? ' · Pedido #' + pedido.id : ''}</p>
+          <p class="small mt-2 mb-0">Te notificaremos por correo cuando se apruebe.</p>
+          <hr class="my-3">
+          <a href="historial.html" class="btn btn-dark">Ver mis pedidos</a>
+        </div>`;
+    }
+
+  } catch (err) {
+    ocultarOverlay();
+    mostrarError('Error inesperado: ' + err.message + '. Intenta de nuevo.');
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

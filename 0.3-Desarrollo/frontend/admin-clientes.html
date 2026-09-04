@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clientes registrados — Panel administrativo</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-institucional py-3">
+  <div class="container">
+    <a class="navbar-brand" href="index.html" data-i18n="nav_brand">
+      Suministros Institucionales
+      <span class="badge-code" data-i18n="nav_badge">PROVEEDOR AUTORIZADO · REG-2026-0417</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav1">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="nav1">
+      <ul class="navbar-nav ms-auto gap-lg-3 align-items-lg-center">
+        <li class="nav-item"><a class="nav-link" href="admin-dashboard.html" data-i18n="nav_dashboard">Dashboard</a></li>
+        <li class="nav-item dropdown selector-idioma"></li>
+        <li class="nav-item d-flex align-items-center" id="auth-nav-slot" data-i18n="nav_auth">Autenticación</li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<header class="hero py-5">
+  <div class="container py-3">
+    <div class="eyebrow mb-2" data-i18n="admin_clients_header">Panel administrativo · Acceso restringido</div>
+    <h1 class="display-serif h2 mb-2" data-i18n="admin_clients_title">Clientes registrados</h1>
+    <p class="lead col-lg-8 mb-0" data-i18n="admin_clients_lead">Datos privados descifrados solo para personal autorizado. No compartas esta pantalla ni la dejes accesible sin control de acceso en producción.</p>
+  </div>
+</header>
+
+<main class="container py-5">
+
+  <div class="mb-4 d-flex flex-wrap gap-2 align-items-center justify-content-between">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <input type="hidden" id="apiBase" value="http://localhost:8080">
+      <button class="btn btn-sm btn-dark" onclick="cargarClientes()" data-i18n="admin_clients_load_btn">Cargar clientes</button>
+    </div>
+    <button class="btn btn-sm" style="background:var(--brass-600); color:#fff;" onclick="window.location.href='registro.html'" data-i18n="admin_clients_new_btn">+ Nuevo cliente</button>
+  </div>
+
+  <div id="estado" class="d-none"></div>
+
+  <div class="table-responsive" style="background:var(--paper-50); border:1px solid rgba(11,35,64,0.12);">
+    <table class="table table-sm mb-0 align-middle">
+      <thead style="background:var(--navy-900); color:var(--paper-100);">
+        <tr>
+          <th>ID</th>
+          <th>Unidad <span class="badge rounded-pill" style="background:var(--tag-publico); font-size:.6rem;">público</span></th>
+          <th>NIT <span class="badge rounded-pill" style="background:var(--tag-semiprivado); font-size:.6rem;">semiprivado</span></th>
+          <th>Funcionario <span class="badge rounded-pill" style="background:var(--tag-privado); font-size:.6rem;">privado</span></th>
+          <th>Correo <span class="badge rounded-pill" style="background:var(--tag-privado); font-size:.6rem;">privado</span></th>
+          <th>Teléfono <span class="badge rounded-pill" style="background:var(--tag-privado); font-size:.6rem;">privado</span></th>
+          <th>Registrado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyClientes">
+        <tr><td colspan="8" class="text-center text-muted py-4" data-i18n="admin_clients_no_data">Sin datos cargados todavía.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal para ver compras -->
+<div class="modal fade" id="modalCompras" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" data-i18n="admin_clients_purchases_title">Compras del cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th data-i18n="admin_clients_purchase_id">ID Pedido</th>
+              <th data-i18n="admin_clients_purchase_date">Fecha</th>
+              <th data-i18n="admin_clients_purchase_products">Productos</th>
+              <th data-i18n="admin_clients_purchase_total">Total</th>
+              <th data-i18n="admin_clients_purchase_status">Estado</th>
+            </tr>
+          </thead>
+          <tbody id="modalComprasBody">
+            <tr><td colspan="5" class="text-center text-muted" data-i18n="admin_clients_purchase_no_data">Sin compras registradas.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para crear/editar cliente -->
+<div class="modal fade" id="modalClienteForm" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalClienteFormTitulo" data-i18n="admin_clients_form_title">Nuevo cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formCliente" onsubmit="return false;">
+          <input type="hidden" id="clienteId" value="">
+          <div class="mb-3">
+            <label class="form-label small" data-i18n="admin_clients_form_unit">Unidad</label>
+            <input type="text" class="form-control" id="clienteNombreUnidad" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small" data-i18n="admin_clients_form_nit">NIT</label>
+            <input type="text" class="form-control" id="clienteNit" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small" data-i18n="admin_clients_form_responsible">Funcionario responsable</label>
+            <input type="text" class="form-control" id="clienteNombreFuncionario" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small" data-i18n="admin_clients_form_email">Correo</label>
+            <input type="email" class="form-control" id="clienteCorreo" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small" data-i18n="admin_clients_form_phone">Teléfono</label>
+            <input type="text" class="form-control" id="clienteTelefono">
+          </div>
+          <div id="formClienteError" class="small text-danger" style="display:none;"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal" data-i18n="admin_clients_form_cancel">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-dark" id="btnGuardarCliente" onclick="guardarCliente()" data-i18n="admin_clients_form_save">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="institucional py-4">
+  <div class="container d-flex flex-wrap justify-content-between small">
+    <span data-i18n="admin_clients_footer_copyright">© 2026 Suministros Institucionales S.A.S.</span>
+    <span data-i18n="admin_clients_footer_internal">Vista de uso interno — no exponer públicamente sin autenticación</span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/auth.js"></script>
+<script>
+function apiBaseUrl() {
+  return document.getElementById('apiBase').value.replace(/\/$/, '');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+// Redirige a login si no hay sesión, y devuelve la sesión si la hay.
+function exigirSesion() {
+  const sesion = authLeer();
+  if (!sesion?.token) {
+    window.location.href = 'login.html?redirect=admin-clientes.html';
+    return null;
+  }
+  if (sesion.rol !== 'admin') {
+    window.location.href = 'index.html';
+    return null;
+  }
+  return sesion;
+}
+
+function authHeaders(sesion, extra) {
+  return Object.assign({ Authorization: 'Bearer ' + sesion.token }, extra || {});
+}
+
+// Cache local de los clientes cargados, para poder rellenar el
+// formulario de edición sin volver a pedirlos al backend.
+let clientesCache = [];
+
+async function cargarClientes() {
+  const sesion = exigirSesion();
+  if (!sesion) return;
+
+  const base = apiBaseUrl();
+  const estado = document.getElementById('estado');
+  const tbody = document.getElementById('tbodyClientes');
+  estado.textContent = 'Consultando ' + base + '/api/clientes ...';
+  try {
+    const resp = await fetch(base + '/api/clientes', {
+      headers: authHeaders(sesion)
+    });
+    if (resp.status === 401) {
+      window.location.href = 'login.html?redirect=admin-clientes.html';
+      return;
+    }
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const clientes = await resp.json();
+    clientesCache = clientes;
+    if (!clientes.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4" data-i18n="admin_clients_no_customers">Aún no hay clientes registrados.</td></tr>';
+    } else {
+      tbody.innerHTML = clientes.map(c => `
+        <tr>
+          <td class="text-muted">${escapeHtml(c.id)}</td>
+          <td>${escapeHtml(c.nombreUnidad)}</td>
+          <td>${escapeHtml(c.nit)}</td>
+          <td>${escapeHtml(c.nombreFuncionario)}</td>
+          <td>${escapeHtml(c.correo)}</td>
+          <td>${escapeHtml(c.telefono)}</td>
+          <td class="small text-muted">${escapeHtml((c.fechaRegistro ?? '').toString().replace('T', ' ').slice(0,16))}</td>
+          <td class="text-nowrap">
+            <button class="btn btn-sm btn-outline-dark" onclick="verCompras(${JSON.stringify(c.id)})">Ver compras</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarCliente(${JSON.stringify(c.id)})">Editar</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="eliminarCliente(${JSON.stringify(c.id)})">Eliminar</button>
+          </td>
+        </tr>`).join('');
+    }
+    estado.textContent = clientes.length + ' cliente(s) cargado(s).';
+  } catch (err) {
+    estado.textContent = 'No se pudo conectar al backend (' + err.message + '). Verifica que esté corriendo y que la URL sea correcta.';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4" data-i18n="admin_clients_error_connection">Error de conexión.</td></tr>';
+  }
+}
+
+async function verCompras(clienteId) {
+  const sesion = exigirSesion();
+  if (!sesion) return;
+  const modalBody = document.getElementById('modalComprasBody');
+  modalBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" data-i18n="admin_clients_modal_purchases_loading">Consultando compras...</td></tr>';
+  try {
+    const resp = await fetch(apiBaseUrl() + '/api/pedidos/' + encodeURIComponent(clienteId), {
+      headers: authHeaders(sesion)
+    });
+    if (resp.status === 401) {
+      window.location.href = 'login.html?redirect=admin-clientes.html';
+      return;
+    }
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const pedidos = await resp.json();
+    if (!pedidos.length) {
+      modalBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" data-i18n="admin_clients_modal_purchases_none">Este cliente no tiene compras registradas.</td></tr>';
+    } else {
+      modalBody.innerHTML = pedidos.map(p => `
+        <tr>
+          <td>${escapeHtml(p.id)}</td>
+          <td>${escapeHtml(new Date(p.fechaPedido).toLocaleString())}</td>
+          <td>${escapeHtml(p.items.map(i => i.nombre + ' × ' + i.cantidad).join(', '))}</td>
+          <td>$${escapeHtml(p.total)}</td>
+          <td>${escapeHtml(p.estado)}</td>
+        </tr>`).join('');
+    }
+    new bootstrap.Modal(document.getElementById('modalCompras')).show();
+  } catch (err) {
+    modalBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Error al consultar compras (' + err.message + ').</td></tr>';
+  }
+}
+
+// ---------- Crear / Editar ----------
+
+function limpiarFormCliente() {
+  document.getElementById('clienteId').value = '';
+  document.getElementById('clienteNombreUnidad').value = '';
+  document.getElementById('clienteNit').value = '';
+  document.getElementById('clienteNombreFuncionario').value = '';
+  document.getElementById('clienteCorreo').value = '';
+  document.getElementById('clienteTelefono').value = '';
+  const err = document.getElementById('formClienteError');
+  err.style.display = 'none';
+  err.textContent = '';
+}
+
+function abrirModalNuevoCliente() {
+  if (!exigirSesion()) return;
+  limpiarFormCliente();
+  document.getElementById('modalClienteFormTitulo').textContent = 'Nuevo cliente';
+  new bootstrap.Modal(document.getElementById('modalClienteForm')).show();
+}
+
+function abrirModalEditarCliente(clienteId) {
+  if (!exigirSesion()) return;
+  const c = clientesCache.find(x => String(x.id) === String(clienteId));
+  if (!c) {
+    alert(textoI18n('admin_clients_not_found', 'No se encontró el cliente en la lista cargada. Vuelve a cargar clientes e inténtalo de nuevo.'));
+    return;
+  }
+  limpiarFormCliente();
+  document.getElementById('clienteId').value = c.id;
+  document.getElementById('clienteNombreUnidad').value = c.nombreUnidad ?? '';
+  document.getElementById('clienteNit').value = c.nit ?? '';
+  document.getElementById('clienteNombreFuncionario').value = c.nombreFuncionario ?? '';
+  document.getElementById('clienteCorreo').value = c.correo ?? '';
+  document.getElementById('clienteTelefono').value = c.telefono ?? '';
+  document.getElementById('modalClienteFormTitulo').textContent = 'Editar cliente';
+  new bootstrap.Modal(document.getElementById('modalClienteForm')).show();
+}
+
+async function guardarCliente() {
+  const sesion = exigirSesion();
+  if (!sesion) return;
+
+  const errEl = document.getElementById('formClienteError');
+  errEl.style.display = 'none';
+
+  const form = document.getElementById('formCliente');
+  if (!form.reportValidity()) return;
+
+  const id = document.getElementById('clienteId').value;
+  const payload = {
+    nombreUnidad: document.getElementById('clienteNombreUnidad').value.trim(),
+    nit: document.getElementById('clienteNit').value.trim(),
+    nombreFuncionario: document.getElementById('clienteNombreFuncionario').value.trim(),
+    correo: document.getElementById('clienteCorreo').value.trim(),
+    telefono: document.getElementById('clienteTelefono').value.trim()
+  };
+
+  const esEdicion = !!id;
+  const url = apiBaseUrl() + '/api/clientes' + (esEdicion ? '/' + encodeURIComponent(id) : '');
+  const metodo = esEdicion ? 'PUT' : 'POST';
+
+  const btn = document.getElementById('btnGuardarCliente');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  try {
+    const resp = await fetch(url, {
+      method: metodo,
+      headers: authHeaders(sesion, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
+    if (resp.status === 401) {
+      window.location.href = 'login.html?redirect=admin-clientes.html';
+      return;
+    }
+    if (!resp.ok) {
+      let detalle = 'HTTP ' + resp.status;
+      try {
+        const cuerpo = await resp.json();
+        if (cuerpo?.mensaje) detalle = cuerpo.mensaje;
+      } catch {}
+      throw new Error(detalle);
+    }
+    bootstrap.Modal.getInstance(document.getElementById('modalClienteForm')).hide();
+    await cargarClientes();
+  } catch (err) {
+    errEl.textContent = 'No se pudo guardar el cliente (' + err.message + ').';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar';
+  }
+}
+
+// ---------- Eliminar ----------
+
+async function eliminarCliente(clienteId) {
+  const sesion = exigirSesion();
+  if (!sesion) return;
+
+  const c = clientesCache.find(x => String(x.id) === String(clienteId));
+  const nombre = c?.nombreUnidad ?? ('cliente #' + clienteId);
+  if (!confirm(textoI18n('admin_clients_delete_confirm', '¿Eliminar "{nombre}"? Esta acción no se puede deshacer.').replace('{nombre}', nombre))) return;
+
+  const estado = document.getElementById('estado');
+  try {
+    const resp = await fetch(apiBaseUrl() + '/api/clientes/' + encodeURIComponent(clienteId), {
+      method: 'DELETE',
+      headers: authHeaders(sesion)
+    });
+    if (resp.status === 401) {
+      window.location.href = 'login.html?redirect=admin-clientes.html';
+      return;
+    }
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    estado.textContent = 'Cliente eliminado correctamente.';
+    await cargarClientes();
+  } catch (err) {
+    estado.textContent = 'No se pudo eliminar el cliente (' + err.message + ').';
+  }
+}
+</script>
+</body>
+</html>

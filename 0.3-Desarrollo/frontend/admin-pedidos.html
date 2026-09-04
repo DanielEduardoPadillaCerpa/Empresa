@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="admin_orders_page_title">Pedidos — Panel administrativo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-institucional py-3">
+  <div class="container">
+    <a class="navbar-brand" href="index.html">
+      <span data-i18n="nav_brand">Suministros Institucionales</span>
+      <span class="badge-code" data-i18n="nav_badge">PROVEEDOR AUTORIZADO · REG-2026-0417</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav1">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="nav1">
+      <ul class="navbar-nav ms-auto gap-lg-3 align-items-lg-center">
+        <li class="nav-item"><a class="nav-link" href="admin-dashboard.html" data-i18n="nav_dashboard">Dashboard</a></li>
+        <li class="nav-item d-flex align-items-center" id="auth-nav-slot"></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<header class="hero py-5">
+  <div class="container py-3">
+    <div class="eyebrow mb-2" data-i18n="admin_orders_header">Panel administrativo · Acceso restringido</div>
+    <h1 class="display-serif h2 mb-2" data-i18n="admin_orders_title">Pedidos registrados</h1>
+    <p class="lead col-lg-8 mb-0" data-i18n="admin_orders_lead">Consulta todos los pedidos de clientes y actualiza su estado.</p>
+  </div>
+</header>
+
+<main class="container py-5">
+  <div class="mb-4 d-flex flex-wrap gap-2 align-items-center">
+    <input type="hidden" id="apiBase" value="http://localhost:8080">
+    <button class="btn btn-sm btn-dark" onclick="cargarPedidos()" data-i18n="admin_orders_load">Cargar pedidos</button>
+  </div>
+
+  <div id="estado" class="d-none"></div>
+
+  <div class="table-responsive" style="background:var(--paper-50); border:1px solid rgba(11,35,64,0.12);">
+    <table class="table table-sm mb-0 align-middle">
+      <thead style="background:var(--navy-900); color:var(--paper-100);">
+        <tr>
+          <th data-i18n="admin_orders_id">ID</th>
+          <th data-i18n="admin_orders_date">Fecha</th>
+          <th data-i18n="admin_orders_products">Productos</th>
+          <th data-i18n="admin_orders_total">Total</th>
+          <th data-i18n="admin_orders_status">Estado</th>
+          <th data-i18n="admin_orders_customer">Cliente</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyPedidos">
+        <tr><td colspan="6" class="text-center text-muted py-4" data-i18n="admin_orders_no_data">Sin pedidos todavía.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<footer class="institucional py-4">
+  <div class="container d-flex flex-wrap justify-content-between small">
+    <span data-i18n="admin_orders_footer_copyright">© 2026 Suministros Institucionales S.A.S.</span>
+    <span data-i18n="admin_orders_footer_internal">Vista de uso interno — no exponer públicamente sin autenticación</span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/auth.js"></script>
+<script>
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+function exigirSesion() {
+  const sesion = authLeer();
+  if (!sesion?.token) {
+    window.location.href = 'login.html?redirect=admin-pedidos.html';
+    return null;
+  }
+  if (sesion.rol !== 'admin') {
+    window.location.href = 'index.html';
+    return null;
+  }
+  return sesion;
+}
+
+async function cargarPedidos() {
+  const base = document.getElementById('apiBase').value.replace(/\/$/, '');
+  const estado = document.getElementById('estado');
+  const tbody = document.getElementById('tbodyPedidos');
+  estado.textContent = 'Consultando ' + base + '/api/pedidos/todos ...';
+
+  const sesion = exigirSesion();
+  if (!sesion) return;
+
+  try {
+    const resp = await fetch(base + '/api/pedidos/todos', {
+      headers: { Authorization: 'Bearer ' + sesion.token }
+    });
+    if (resp.status === 401) {
+      window.location.href = 'login.html?redirect=admin-pedidos.html';
+      return;
+    }
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const pedidos = await resp.json();
+
+    if (!pedidos.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4" data-i18n="admin_orders_empty">No hay pedidos registrados.</td></tr>';
+    } else {
+      tbody.innerHTML = pedidos.map(p => `
+        <tr>
+          <td>${p.id}</td>
+          <td>${new Date(p.fechaPedido).toLocaleString()}</td>
+          <td>${p.items.map(i => i.nombre + ' × ' + i.cantidad).join(', ')}</td>
+          <td>$${p.total}</td>
+          <td>
+            <select onchange="actualizarEstado(${p.id}, this.value)">
+              <option value="pendiente" data-i18n="admin_orders_pending" ${p.estado==='pendiente'?'selected':''}>Pendiente</option>
+              <option value="enviado" data-i18n="admin_orders_sent" ${p.estado==='enviado'?'selected':''}>Enviado</option>
+              <option value="entregado" data-i18n="admin_orders_delivered" ${p.estado==='entregado'?'selected':''}>Entregado</option>
+              <option value="cancelado" data-i18n="admin_orders_cancelled" ${p.estado==='cancelado'?'selected':''}>Cancelado</option>
+            </select>
+          </td>
+          <td>${escapeHtml(p.cliente.unidad)} (${escapeHtml(p.cliente.nit || '')})</td>
+        </tr>`).join('');
+    }
+    estado.textContent = pedidos.length + ' pedido(s) cargado(s).';
+  } catch (err) {
+    estado.textContent = 'Error al consultar pedidos (' + err.message + ').';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4" data-i18n="admin_orders_connection_error">Error de conexión.</td></tr>';
+  }
+}
+
+async function actualizarEstado(pedidoId, nuevoEstado) {
+  const base = document.getElementById('apiBase').value.replace(/\/$/, '');
+  const sesion = authLeer();
+  if (!sesion?.token) {
+    window.location.href = 'login.html?redirect=admin-pedidos.html';
+    return;
+  }
+  try {
+    const resp = await fetch(base + '/api/pedidos/' + pedidoId, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + sesion.token
+      },
+      body: JSON.stringify({ estado: nuevoEstado })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    document.getElementById('estado').textContent = 'Pedido ' + pedidoId + ' actualizado a ' + nuevoEstado;
+  } catch (err) {
+    document.getElementById('estado').textContent = 'Error al actualizar pedido (' + err.message + ').';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', cargarPedidos);
+</script>
+</body>
+</html>
