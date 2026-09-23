@@ -83,6 +83,56 @@ const PRODUCTOS_SEED = [
   [ 'Kit de recolección de ADN', 'Hisopos estériles y tubos de ensayo para muestras biológicas.', 89000, 20, false, 'Criminalística'],
 ];
 
+const IMAGENES_POR_PRODUCTO = [
+  ['uniforme|camuflaje|gala', 'Uniforme operativo.jpg'],
+  ['bota', 'Botas Tacticas antideslizantes.jpg'],
+  ['chaleco|aramida|armana', 'chaleco balistico.jpg'],
+  ['casco|antidisturbios', 'Casco de proteccion urbana.jpg'],
+  ['pantalon', 'Pantalon tactico de dotacion.jpg'],
+  ['polo', 'polo tecnico antibacterial.jpeg'],
+  ['chaqueton', 'chaqueton de alta visibilidad.jpg'],
+  ['cinturon', 'cinturon de dotacion.jpg'],
+  ['placa', 'placas balisticas traumaticas.jpg'],
+  ['guante', 'Guantes anticorte y antipinchazo.jpg'],
+  ['gafa', 'Gafas tacticas de proteccion.jpg'],
+  ['alcohol', 'Alcoholimetro digital evidencial.jpg'],
+  ['drogas', 'kit de detecion de drogas.jpg'],
+  ['sonometro', 'Sonometro digital.jpg'],
+  ['cinemometro', 'Cinemometro laser.jpg'],
+  ['cono', 'cono de señalizacion con linterna.jpg'],
+  ['grillete', 'Grillete Metalicos de bisagra.jpg'],
+  ['lazo', 'Lazos de retencion plastico.jpg'],
+  ['llave', 'Llave universal de grilletes.jpg'],
+  ['multifuncion', 'Herramienta multifuncion tactica.jpg'],
+  ['navaja', 'navaja de rescate.jpg'],
+  ['cizalla', 'Cizalla portatil de apertura forzada.jpg'],
+  ['funda', 'Funda pistola nivel III.jpg'],
+  ['portagrilletes', 'portagrilletes tecnico.webp'],
+  ['portacargadores', 'portacargadores dobles.jpg'],
+  ['tahali', 'Tahali portadefensa.jpg'],
+  ['anclajes', 'Kit de anclajes MOLLE.webp'],
+  ['radio', 'Radio portatil digital.jpg'],
+  ['microfono', 'Microfono de solapa.jpg'],
+  ['camara', 'camara corporal.jpg'],
+  ['baliza', 'Baliza de localizacion GPS.jpg'],
+  ['torniquete', 'Torniquete tactico.jpg'],
+  ['vendaje', 'Vendaje israeli de emergencia.jpg'],
+  ['hemostatico', 'Agente Hemostatico.jpg'],
+  ['tijera', 'Tijeras de rescate reforzadas.jpg'],
+  ['parche', 'parche toracico oclusivo.jpg'],
+  ['revelado', 'kit de revelado de huellas.jpg'],
+  ['forense', 'Linterna forence UV.jpg'],
+  ['bolsas', 'Kit de bolsas de evidencia.jpg'],
+  ['testigos', 'testigos metricos numerados.jpg'],
+  ['adn', 'kit de recoleccion de adn.jpg'],
+];
+
+function imagenProductoPorNombre(nombre) {
+  const nombreNormalizado = String(nombre || '').toLowerCase();
+  const coincidencia = IMAGENES_POR_PRODUCTO.find(([patron]) => new RegExp(patron).test(nombreNormalizado));
+  return coincidencia ? coincidencia[1] : null;
+}
+
 
 
 async function migrar() {
@@ -256,24 +306,30 @@ async function migrarColumnasFaltantes() {
 // (si la tabla ya tiene datos, no hace nada — evita duplicar en cada reinicio).
 async function sembrarCategoriasYProductos() {
   const [[{ total }]] = await pool.query('SELECT COUNT(*) AS total FROM categorias');
-  if (total > 0) return;
+  if (total === 0) {
+    for (const [nombre, descripcion] of CATEGORIAS_SEED) {
+      await pool.query('INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)', [nombre, descripcion]);
+    }
 
-  for (const [nombre, descripcion] of CATEGORIAS_SEED) {
-    await pool.query('INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)', [nombre, descripcion]);
+    const [categorias] = await pool.query('SELECT id, nombre FROM categorias');
+    const idPorNombre = Object.fromEntries(categorias.map(c => [c.nombre, c.id]));
+
+    for (const [nombre, descripcion, precio, cantidad, restringido, nombreCategoria] of PRODUCTOS_SEED) {
+      await pool.query(
+        `INSERT INTO productos (nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id)
+         VALUES (?, ?, ?, ?, ?, 'activo', ?, ?)`,
+        [nombre, descripcion, precio, imagenProductoPorNombre(nombre), cantidad, restringido, idPorNombre[nombreCategoria] || null]
+      );
+    }
+
+    console.log(`[db] Sembradas ${CATEGORIAS_SEED.length} categorías y ${PRODUCTOS_SEED.length} productos de ejemplo.`);
   }
 
-  const [categorias] = await pool.query('SELECT id, nombre FROM categorias');
-  const idPorNombre = Object.fromEntries(categorias.map(c => [c.nombre, c.id]));
-
-  for (const [nombre, descripcion, precio, cantidad, restringido, nombreCategoria] of PRODUCTOS_SEED) {
-    await pool.query(
-      `INSERT INTO productos (nombre, descripcion, precio, cantidad_disponible, estado, restringido, categoria_id)
-       VALUES (?, ?, ?, ?, 'activo', ?, ?)`,
-      [nombre, descripcion, precio, cantidad, restringido, idPorNombre[nombreCategoria] || null]
-    );
+  const [productosSinImagen] = await pool.query('SELECT id, nombre FROM productos WHERE imagen IS NULL OR imagen = ""');
+  for (const producto of productosSinImagen) {
+    const imagen = imagenProductoPorNombre(producto.nombre);
+    if (imagen) await pool.query('UPDATE productos SET imagen = ? WHERE id = ?', [imagen, producto.id]);
   }
-
-  console.log(`[db] Sembradas ${CATEGORIAS_SEED.length} categorías y ${PRODUCTOS_SEED.length} productos de ejemplo.`);
 }
 
 // Crea una cuenta de administrador la primera vez que se arranca el backend,

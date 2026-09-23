@@ -282,3 +282,163 @@ footer.institucional a { color: var(--paper-100); }
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+/* =========================================================
+   FILTROS DEL CATÁLOGO
+   ========================================================= */
+
+.filtros-catalogo {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+}
+
+
+/* Títulos pequeños */
+
+.filtro-titulo,
+.filtro-item label,
+.filtro-precio label,
+.filtro-chips label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    color: #222;
+}
+
+
+/* MACRO CATEGORÍAS */
+
+.filtro-macro {
+    margin-bottom: 16px;
+}
+
+.macro-opciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.macro-btn {
+    border: 1px solid #d0d0d0;
+    background: #fff;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.macro-btn:hover {
+    border-color: #222;
+    background: #f5f5f5;
+}
+
+.macro-btn.activo {
+    background: #172b45;
+    border-color: #172b45;
+    color: white;
+}
+
+
+/* FILTROS PRINCIPALES */
+
+.filtros-principales {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1.1fr 1.5fr auto;
+    gap: 16px;
+    align-items: end;
+}
+
+
+/* SELECTS */
+
+.filtro-select {
+    width: 100%;
+    min-height: 38px;
+    padding: 7px 10px;
+    border: 1px solid #cfcfcf;
+    border-radius: 6px;
+    background: white;
+    font-size: 13px;
+    color: #333;
+}
+
+.filtro-select:focus {
+    outline: none;
+    border-color: #172b45;
+}
+
+
+/* RANGO DE PRECIO */
+
+.precio-slider {
+    position: relative;
+    padding-top: 5px;
+}
+
+.precio-slider input[type="range"] {
+    width: 100%;
+    accent-color: #172b45;
+}
+
+
+/* CHIPS */
+
+.chips-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chip {
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 20px;
+    padding: 7px 11px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.chip:hover {
+    background: #f4f4f4;
+    border-color: #aaa;
+}
+
+.chip.activo {
+    background: #172b45;
+    color: #fff;
+    border-color: #172b45;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 1100px) {
+
+    .filtros-principales {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+}
+
+@media (max-width: 600px) {
+
+    .filtros-principales {
+        grid-template-columns: 1fr;
+    }
+
+    .macro-opciones {
+        flex-direction: column;
+    }
+
+    .macro-btn {
+        width: 100%;
+        text-align: left;
+    }
+
+}

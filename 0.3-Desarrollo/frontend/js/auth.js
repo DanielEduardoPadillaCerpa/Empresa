@@ -7,7 +7,7 @@
    ============================================================ */
 
 // URL única del backend, compartida por todas las páginas (cart.js, index.html, etc.)
-const API_BASE = 'http://localhost:8080';
+const API_BASE = 'http://localhost:8081';
 
 const AUTH_KEY = 'si_auth';
 

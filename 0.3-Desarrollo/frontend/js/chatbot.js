@@ -74,7 +74,7 @@ const CB_CONVERSACION_ID = 'cb-' + Date.now() + '-' + Math.random().toString(36)
 async function cbRegistrarCalificacion(valor) {
   cbAgregarMensaje(`Calificación registrada: ${valor}/5. Gracias por tu retroalimentación.`, 'bot');
   try {
-    const base = (typeof API_BASE !== 'undefined') ? API_BASE : 'http://localhost:8080';
+    const base = (typeof API_BASE !== 'undefined') ? API_BASE : 'http://localhost:8081';
     await fetch(base + '/api/atencion/calificacion', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -3,80 +3,1169 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title data-i18n="landing_page_title">Suministros Institucionales</title>
+
+<title data-i18n="landing_page_title">
+  Suministros Institucionales
+</title>
+
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
 <link rel="stylesheet" href="css/style.css">
+
+<style>
+
+/* =========================================================
+   LANDING PAGE
+   ========================================================= */
+
+body {
+    background: #f7f5ef;
+}
+
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.landing-hero {
+    background:
+        linear-gradient(rgba(7, 29, 55, .94), rgba(7, 29, 55, .97)),
+        radial-gradient(circle at center, #183c64, #071d37);
+
+    color: white;
+    min-height: 420px;
+
+    display: flex;
+    align-items: center;
+
+    border-top: 2px solid var(--brass-600);
+    border-bottom: 1px solid rgba(176, 141, 87, .45);
+}
+
+.landing-hero-content {
+    max-width: 850px;
+    margin: auto;
+}
+
+.landing-hero h1 {
+    font-family: "Source Serif 4", serif;
+    font-weight: 700;
+    line-height: 1.05;
+    font-size: clamp(2.4rem, 5vw, 4.3rem);
+}
+
+.landing-hero p {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+    color: #d9e0e8;
+}
+
+
+/* =========================================================
+   BOTONES HERO
+   ========================================================= */
+
+.btn-catalogo {
+    background: var(--brass-600);
+    color: var(--navy-900);
+    border: 1px solid var(--brass-600);
+    font-weight: 700;
+}
+
+.btn-catalogo:hover {
+    background: #c5a66d;
+    color: #071d37;
+}
+
+.btn-login {
+    border: 1px solid white;
+    color: white;
+}
+
+.btn-login:hover {
+    background: white;
+    color: #071d37;
+}
+
+
+/* =========================================================
+   BENEFICIOS
+   ========================================================= */
+
+.beneficios {
+    margin-top: 0;
+}
+
+.beneficio-card {
+    height: 100%;
+    background: #fbfaf6;
+    border: 1px solid rgba(11, 35, 64, .13);
+    border-top: 3px solid var(--brass-600);
+
+    padding: 28px 22px;
+
+    text-align: center;
+
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.beneficio-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,.08);
+}
+
+.beneficio-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+
+
+/* =========================================================
+   TITULOS DE SECCION
+   ========================================================= */
+
+.seccion-titulo {
+    font-family: "Source Serif 4", serif;
+    font-weight: 700;
+    color: var(--navy-900);
+}
+
+.seccion-subtitulo {
+    color: #6c757d;
+}
+
+
+/* =========================================================
+   INDUSTRIAS
+   ========================================================= */
+
+.industrias-grid {
+    display: grid;
+
+    grid-template-columns:
+        1.25fr
+        1fr
+        1.25fr
+        1fr;
+
+    grid-template-rows: 170px 170px;
+
+    gap: 10px;
+}
+
+.industria-card {
+    position: relative;
+
+    overflow: hidden;
+
+    border-radius: 7px;
+
+    min-height: 150px;
+
+    background: #172b45;
+
+    text-decoration: none;
+
+    display: flex;
+    align-items: flex-end;
+}
+
+.industria-card.grande {
+    grid-row: span 2;
+}
+
+.industria-card.ancha {
+    grid-column: span 2;
+}
+
+.industria-card img {
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+
+    position: absolute;
+    inset: 0;
+
+    transition: transform .35s ease;
+}
+
+.industria-card::after {
+    content: "";
+
+    position: absolute;
+    inset: 0;
+
+    background:
+        linear-gradient(
+            transparent 20%,
+            rgba(0,0,0,.75) 100%
+        );
+}
+
+.industria-card:hover img {
+    transform: scale(1.05);
+}
+
+.industria-texto {
+    position: relative;
+    z-index: 2;
+
+    color: white;
+
+    font-size: 1.25rem;
+    font-weight: 700;
+
+    line-height: 1.05;
+
+    padding: 18px;
+}
+
+
+/* =========================================================
+   PRODUCTOS POPULARES
+   ========================================================= */
+
+.productos-populares {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 10px;
+}
+
+.producto-popular {
+    background: white;
+
+    border: 1px solid #ddd;
+
+    border-radius: 5px;
+
+    overflow: hidden;
+
+    transition:
+        transform .2s ease,
+        box-shadow .2s ease;
+}
+
+.producto-popular:hover {
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 7px 18px rgba(0,0,0,.10);
+}
+
+.producto-popular-img {
+    width: 100%;
+    height: 175px;
+
+    object-fit: cover;
+
+    background: #eee;
+}
+
+.producto-popular-body {
+    padding: 12px;
+}
+
+.producto-popular h3 {
+    font-size: .85rem;
+    font-weight: 700;
+
+    margin-bottom: 5px;
+}
+
+.producto-popular .precio {
+    font-weight: 700;
+    color: #111;
+}
+
+.btn-producto {
+    width: 100%;
+
+    margin-top: 8px;
+
+    background: var(--brass-600);
+    color: var(--navy-900);
+
+    border: none;
+
+    font-size: .72rem;
+    font-weight: 600;
+}
+
+.btn-producto:hover {
+    background: #c5a66d;
+}
+
+
+/* =========================================================
+   CLIENTES
+   ========================================================= */
+
+.clientes {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 25px;
+
+    align-items: center;
+}
+
+.cliente {
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    gap: 8px;
+
+    color: #555;
+
+    font-size: .85rem;
+    font-weight: 500;
+}
+
+.cliente-icon {
+    font-size: 1.7rem;
+    color: #555;
+}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.footer-nuevo {
+    background: var(--navy-900);
+
+    color: #d9e0e8;
+
+    border-top: 3px solid var(--brass-600);
+}
+
+.footer-nuevo h4 {
+    color: white;
+
+    font-size: .9rem;
+
+    margin-bottom: 12px;
+}
+
+.footer-nuevo a {
+    color: #d9e0e8;
+
+    text-decoration: none;
+
+    font-size: .78rem;
+}
+
+.footer-nuevo a:hover {
+    color: var(--brass-500);
+}
+
+.footer-col {
+    display: flex;
+    flex-direction: column;
+
+    gap: 5px;
+}
+
+.footer-contacto {
+    font-size: .78rem;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 992px) {
+
+    .industrias-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: auto;
+    }
+
+    .industria-card.grande {
+        grid-row: span 1;
+    }
+
+    .industria-card.ancha {
+        grid-column: span 1;
+    }
+
+    .productos-populares {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .clientes {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+
+@media (max-width: 576px) {
+
+    .landing-hero {
+        min-height: 500px;
+    }
+
+    .industrias-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .productos-populares {
+        grid-template-columns: 1fr;
+    }
+
+    .clientes {
+        grid-template-columns: 1fr;
+    }
+}
+
+</style>
 </head>
+
+
 <body>
 
+
+<!-- =====================================================
+     NAVBAR
+     ===================================================== -->
+
 <nav class="navbar navbar-expand-lg navbar-institucional py-3">
+
   <div class="container">
+
     <a class="navbar-brand" href="landing.html">
-      <span data-i18n="nav_brand">Suministros Institucionales</span>
-      <span class="badge-code" data-i18n="nav_badge">PROVEEDOR AUTORIZADO · REG-2026-0417</span>
+
+      <span data-i18n="nav_brand">
+        Suministros Institucionales
+      </span>
+
+      <span class="badge-code"
+            data-i18n="nav_badge">
+        PROVEEDOR AUTORIZADO · REG-2026-0417
+      </span>
+
     </a>
-    <div class="collapse navbar-collapse">
+
+
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#landingNav">
+
+      <span class="navbar-toggler-icon"></span>
+
+    </button>
+
+
+    <div
+      class="collapse navbar-collapse"
+      id="landingNav">
+
       <ul class="navbar-nav ms-auto gap-lg-3 align-items-lg-center">
-        <li class="nav-item"><a class="nav-link" href="index.html" data-i18n="nav_catalogo">Catálogo</a></li>
-        <li class="nav-item" id="navRegistro">
-          <a class="nav-link" href="registro.html" data-i18n="nav_registro">Registro de cliente</a>
+
+        <li class="nav-item">
+
+          <a
+            class="nav-link"
+            href="index.html"
+            data-i18n="nav_catalogo">
+
+            Catálogo
+
+          </a>
+
         </li>
-        <li class="nav-item dropdown selector-idioma"></li>
-        <li class="nav-item d-flex align-items-center" id="auth-nav-slot"></li>
+
+
+        <li class="nav-item"
+            id="navRegistro">
+
+          <a
+            class="nav-link"
+            href="registro.html"
+            data-i18n="nav_registro">
+
+            Registro de cliente
+
+          </a>
+
+        </li>
+
+
+        <li class="nav-item dropdown selector-idioma">
+        </li>
+
+
+        <li
+          class="nav-item d-flex align-items-center"
+          id="auth-nav-slot">
+
+        </li>
+
       </ul>
+
     </div>
+
   </div>
+
 </nav>
 
-<header class="hero py-5">
-  <div class="container py-5 text-center">
-    <div class="eyebrow mb-3" data-i18n="landing_eyebrow">Plataforma institucional 2026</div>
-    <h1 class="display-serif mb-3" style="font-size:clamp(2.2rem,5vw,3.6rem);"><span data-i18n="landing_title_first">Dotación y suministro</span><br><span data-i18n="landing_title_second">para unidades policiales</span></h1>
-    <p class="lead col-lg-7 mx-auto mb-4" data-i18n="landing_lead">Catálogo, pedidos y atención al cliente disponibles las 24 horas, con trazabilidad completa y cumplimiento de la Ley 1581 de 2012 en cada paso.</p>
-    <div class="d-flex gap-3 justify-content-center flex-wrap">
-      <a href="index.html" class="btn btn-lg" style="background:var(--brass-600); color:var(--navy-900); font-weight:600;" data-i18n="landing_catalog_btn">Ver catálogo</a>
-      <a href="login.html" class="btn btn-lg btn-outline-light" data-i18n="landing_login_btn">Iniciar sesión</a>
+
+
+<!-- =====================================================
+     HERO
+     ===================================================== -->
+
+<header class="landing-hero">
+
+  <div class="container text-center">
+
+    <div class="landing-hero-content">
+
+      <div
+        class="eyebrow mb-3"
+        data-i18n="landing_eyebrow">
+
+        Plataforma institucional 2026
+
+      </div>
+
+
+      <h1 class="mb-4">
+
+        <span data-i18n="landing_title_first">
+          Dotación y suministro
+        </span>
+
+        <br>
+
+        <span data-i18n="landing_title_second">
+          para unidades policiales
+        </span>
+
+      </h1>
+
+
+      <p class="lead mb-4">
+
+        <span data-i18n="landing_lead">
+          Catálogo, pedidos y atención al cliente disponibles
+          las 24 horas, con trazabilidad completa y cumplimiento
+          de la Ley 1581 de 2012 en cada paso.
+        </span>
+
+      </p>
+
+
+      <div
+        class="d-flex gap-3 justify-content-center flex-wrap">
+
+        <a
+          href="index.html"
+          class="btn btn-lg btn-catalogo"
+          data-i18n="landing_catalog_btn">
+
+          Ver catálogo
+
+        </a>
+
+
+        <a
+          href="login.html"
+          class="btn btn-lg btn-login"
+          data-i18n="landing_login_btn">
+
+          Iniciar sesión
+
+        </a>
+
+      </div>
+
+
+      <p
+        class="small mt-3"
+        style="color:var(--slate-400);">
+
+        <span data-i18n="landing_first_time">
+          ¿Primera vez aquí?
+        </span>
+
+        <a
+          href="registro.html"
+          style="color:var(--brass-500);"
+          data-i18n="landing_create_account">
+
+          Crea tu cuenta institucional
+
+        </a>
+
+      </p>
+
+
+      <a
+        href="registro.html"
+        class="btn btn-outline-light mt-2 px-4">
+
+        COMIENZA TU COMPRA CORPORATIVA
+
+      </a>
+
     </div>
-    <p class="small mt-3" style="color:var(--slate-400);"><span data-i18n="landing_first_time">¿Primera vez aquí?</span> <a href="registro.html" style="color:var(--brass-500);" data-i18n="landing_create_account">Crea tu cuenta institucional</a></p>
+
   </div>
+
 </header>
 
-<main class="container py-5">
-  <div class="row g-4 text-center">
+
+
+<!-- =====================================================
+     BENEFICIOS
+     ===================================================== -->
+
+<main>
+
+
+<section class="container py-5">
+
+  <div class="row g-4 beneficios">
+
+
     <div class="col-md-4">
-      <div class="p-4 h-100" style="background:var(--paper-50); border:1px solid rgba(11,35,64,0.12); border-top:3px solid var(--brass-600);">
-        <div style="font-size:2rem;">🕐</div>
-        <h3 class="h6 mt-2" data-i18n="landing_support_title">Atención 24/7</h3>
-        <p class="small text-muted mb-0" data-i18n="landing_support_text">Chatbot institucional y pedidos disponibles a cualquier hora, con escalamiento a un agente humano cuando se necesita.</p>
+
+      <div class="beneficio-card">
+
+        <div class="beneficio-icon">
+          🕐
+        </div>
+
+        <h3
+          class="h6"
+          data-i18n="landing_support_title">
+
+          Atención 24/7
+
+        </h3>
+
+        <p
+          class="small text-muted mb-0"
+          data-i18n="landing_support_text">
+
+          Chatbot institucional y pedidos disponibles
+          a cualquier hora, con escalamiento a un
+          agente humano cuando se necesita.
+
+        </p>
+
       </div>
+
     </div>
+
+
     <div class="col-md-4">
-      <div class="p-4 h-100" style="background:var(--paper-50); border:1px solid rgba(11,35,64,0.12); border-top:3px solid var(--brass-600);">
-        <div style="font-size:2rem;">🔒</div>
-        <h3 class="h6 mt-2" data-i18n="landing_security_title">Datos protegidos</h3>
-        <p class="small text-muted mb-0" data-i18n="landing_security_text">Cada dato se clasifica y se cifra según su nivel de sensibilidad, conforme a la Ley 1581 de 2012.</p>
+
+      <div class="beneficio-card">
+
+        <div class="beneficio-icon">
+          🔒
+        </div>
+
+        <h3
+          class="h6"
+          data-i18n="landing_security_title">
+
+          Datos protegidos
+
+        </h3>
+
+        <p
+          class="small text-muted mb-0"
+          data-i18n="landing_security_text">
+
+          Cada dato se clasifica y se cifra según
+          su nivel de sensibilidad, conforme a la
+          Ley 1581 de 2012.
+
+        </p>
+
       </div>
+
     </div>
+
+
     <div class="col-md-4">
-      <div class="p-4 h-100" style="background:var(--paper-50); border:1px solid rgba(11,35,64,0.12); border-top:3px solid var(--brass-600);">
-        <div style="font-size:2rem;">📦</div>
-        <h3 class="h6 mt-2" data-i18n="landing_delivery_title">Entrega directa</h3>
-        <p class="small text-muted mb-0" data-i18n="landing_delivery_text">Despacho a la instalación oficial registrada, con seguimiento de pedido en tiempo real.</p>
+
+      <div class="beneficio-card">
+
+        <div class="beneficio-icon">
+          📦
+        </div>
+
+        <h3
+          class="h6"
+          data-i18n="landing_delivery_title">
+
+          Entrega directa
+
+        </h3>
+
+        <p
+          class="small text-muted mb-0"
+          data-i18n="landing_delivery_text">
+
+          Despacho a la instalación oficial registrada,
+          con seguimiento de pedido en tiempo real.
+
+        </p>
+
       </div>
+
     </div>
+
+
   </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     EXPLORAR POR INDUSTRIA
+     ===================================================== -->
+
+<section class="container pb-5">
+
+  <div class="text-center mb-4">
+
+    <h2 class="seccion-titulo h4 mb-1">
+
+      EXPLORAR POR INDUSTRIA
+
+    </h2>
+
+  </div>
+
+
+  <div class="industrias-grid">
+
+
+    <!-- GRANDE -->
+    <a href="index.html"
+       class="industria-card grande">
+
+      <img
+        src="img/industria-talleres.jpg"
+        alt="Industrias y talleres">
+
+      <span class="industria-texto">
+
+        INDUSTRIAS &<br>
+        TALLERES
+
+      </span>
+
+    </a>
+
+
+    <!-- GRANDE -->
+    <a href="index.html"
+       class="industria-card grande">
+
+      <img
+        src="img/vestimenta-tactica.jpg"
+        alt="Vestimenta táctica">
+
+      <span class="industria-texto">
+
+        VESTIMENTA<br>
+        TÁCTICA
+
+      </span>
+
+    </a>
+
+
+    <!-- ARRIBA DERECHA -->
+    <a href="index.html"
+       class="industria-card ancha">
+
+      <img
+        src="img/industria-almacen.jpg"
+        alt="Industria almacén">
+
+      <span class="industria-texto">
+
+        INDUSTRIA ALMACÉN
+
+      </span>
+
+    </a>
+
+
+    <!-- ABAJO -->
+    <a href="index.html"
+       class="industria-card">
+
+      <img
+        src="img/logistica-almacen.jpg"
+        alt="Logística y almacén">
+
+      <span class="industria-texto">
+
+        LOGÍSTICA &<br>
+        ALMACÉN
+
+      </span>
+
+    </a>
+
+
+    <a href="index.html"
+       class="industria-card">
+
+      <img
+        src="img/construccion.jpg"
+        alt="Construcción">
+
+      <span class="industria-texto">
+
+        CONSTRUCCIÓN
+
+      </span>
+
+    </a>
+
+
+  </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     PRODUCTOS POPULARES
+     ===================================================== -->
+
+<section class="container pb-5">
+
+  <div class="text-center mb-4">
+
+    <h2 class="seccion-titulo h4 mb-1">
+
+      NUESTROS PRODUCTOS MÁS POPULARES
+
+    </h2>
+
+  </div>
+
+
+  <div class="productos-populares" id="productos-populares">
+    <p class="text-muted">Cargando productos...</p>
+  </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     CLIENTES
+     ===================================================== -->
+
+<section class="container pb-5">
+
+  <div class="text-center mb-4">
+
+    <h2 class="seccion-titulo h4">
+
+      CLIENTES QUE CONFÍAN EN NOSOTROS
+
+    </h2>
+
+  </div>
+
+
+  <div class="clientes">
+
+
+    <div class="cliente">
+
+      <span class="cliente-icon">
+        🌐
+      </span>
+
+      <span>
+        Logística<br>
+        Global
+      </span>
+
+    </div>
+
+
+    <div class="cliente">
+
+      <span class="cliente-icon">
+        🏢
+      </span>
+
+      <span>
+        Empresa<br>
+        Constructora<br>
+        del Norte
+      </span>
+
+    </div>
+
+
+    <div class="cliente">
+
+      <span class="cliente-icon">
+        🛡️
+      </span>
+
+      <span>
+        Seguridad<br>
+        Integral Co.
+      </span>
+
+    </div>
+
+
+    <div class="cliente">
+
+      <span class="cliente-icon">
+        📦
+      </span>
+
+      <span>
+        Almacén<br>
+        Central
+      </span>
+
+    </div>
+
+
+  </div>
+
+</section>
+
+
 </main>
 
-<footer class="institucional py-4">
-  <div class="container d-flex flex-wrap justify-content-between small">
-    <span data-i18n="footer_rights">© 2026 Suministros Institucionales S.A.S. · NIT 900.XXX.XXX-1</span>
-    <span><span data-i18n="footer_privacy">Tratamiento de datos conforme a la Ley 1581 de 2012</span> · <a href="registro.html" data-i18n="footer_policy_link">Ver política</a></span>
+
+
+<!-- =====================================================
+     FOOTER
+     ===================================================== -->
+
+<footer class="footer-nuevo py-5">
+
+  <div class="container">
+
+    <div class="row g-4">
+
+
+      <!-- POLÍTICAS -->
+
+      <div class="col-md-3">
+
+        <div class="footer-col">
+
+          <h4>
+            Políticas
+          </h4>
+
+          <a href="registro.html">
+            Políticas de Privacidad
+          </a>
+
+          <a href="#">
+            Términos del Servicio
+          </a>
+
+          <a href="#">
+            Cambios y Devoluciones
+          </a>
+
+        </div>
+
+      </div>
+
+
+      <!-- EMPRESA -->
+
+      <div class="col-md-3">
+
+        <div class="footer-col">
+
+          <h4>
+            Empresa
+          </h4>
+
+          <a href="#">
+            Contacto Corporativo
+          </a>
+
+          <a href="#">
+            Sobre Nosotros
+          </a>
+
+        </div>
+
+      </div>
+
+
+      <!-- CONTACTO -->
+
+      <div class="col-md-3">
+
+        <div class="footer-col">
+
+          <h4>
+            Contacto
+          </h4>
+
+          <div class="footer-contacto">
+
+            🟢 WhatsApp Ventas
+
+          </div>
+
+          <div class="footer-contacto">
+
+            ✉️ Email Mesa de Ayuda
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- DIRECCIÓN -->
+
+      <div class="col-md-3">
+
+        <div class="footer-col">
+
+          <h4>
+            Corporación
+          </h4>
+
+          <div class="footer-contacto">
+
+            Años. Habitantes de 288,<br>
+            Bucaramanga,<br>
+            Santander, Colombia
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+    </div>
+
+
+    <hr
+      class="my-4"
+      style="border-color:rgba(255,255,255,.15);">
+
+
+    <div
+      class="d-flex flex-wrap justify-content-between small">
+
+      <span>
+
+        © 2026 Suministros Institucionales S.A.S.
+
+      </span>
+
+      <span>
+
+        NIT 900.XXX.XXX-1
+
+      </span>
+
+    </div>
+
   </div>
+
 </footer>
 
+
+
+<!-- =====================================================
+     SCRIPTS
+     ===================================================== -->
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script src="js/i18n.js"></script>
+
 <script src="js/auth.js"></script>
+<script src="js/imagenes.js"></script>
+<script src="js/cart.js"></script>
+<script>
+  function escaparLanding(valor) {
+    const div = document.createElement('div');
+    div.textContent = valor ?? '';
+    return div.innerHTML;
+  }
+
+  function cargarProductosLanding() {
+    const contenedor = document.getElementById('productos-populares');
+    fetch(API_BASE + '/api/productos')
+      .then(resp => {
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.json();
+      })
+      .then(productos => {
+        const destacados = productos.slice(0, 4);
+        if (!destacados.length) {
+          contenedor.innerHTML = '<p class="text-muted">No hay productos disponibles.</p>';
+          return;
+        }
+        contenedor.innerHTML = destacados.map(producto => {
+          const detalleUrl = 'producto-detalle.html?id=' + encodeURIComponent(producto.id);
+          const sinStock = Number(producto.cantidad_disponible) <= 0;
+          return `
+            <article class="producto-popular">
+              <a href="${detalleUrl}">
+                <img class="producto-popular-img" src="${imgProducto(producto)}" alt="${escaparLanding(producto.nombre)}" loading="lazy">
+              </a>
+              <div class="producto-popular-body">
+                <h3>${escaparLanding(producto.nombre)}</h3>
+                <div class="precio">$${Number(producto.precio || 0).toLocaleString('es-CO')}</div>
+                <button class="btn btn-producto" data-id="${producto.id}" data-nombre="${escaparLanding(producto.nombre)}" data-precio="${producto.precio}" data-restringido="${producto.restringido === 1 || producto.restringido === true}" ${sinStock ? 'disabled' : ''} onclick="agregarAlCarrito(this)">
+                  ${sinStock ? 'Sin inventario' : 'Añadir al carrito'}
+                </button>
+              </div>
+            </article>`;
+        }).join('');
+      })
+      .catch(err => {
+        console.error('No se pudieron cargar los productos del landing', err);
+        contenedor.innerHTML = '<p class="text-muted">No se pudieron cargar los productos.</p>';
+      });
+  }
+
+  document.addEventListener('DOMContentLoaded', cargarProductosLanding);
+</script>
+
+
 </body>
 </html>

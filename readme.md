@@ -20,7 +20,7 @@ suite-institucional/
    cp .env.example .env      # completa DB_PASSWORD, CRYPTO_KEY y JWT_SECRET
    npm start
    ```
-   Debe quedar corriendo en `http://localhost:8080`.
+   Debe quedar corriendo en `http://localhost:8081`.
 
 2. **Frontend:**
    Abre `frontend/landing.html` en el navegador — esa es la página de entrada del sitio

@@ -57,7 +57,7 @@ function imgProducto(producto) {
     if (producto.imagen.startsWith('http://') || producto.imagen.startsWith('https://') || producto.imagen.startsWith('data:')) {
       return producto.imagen;
     }
-    const base = (typeof API_BASE !== 'undefined' ? API_BASE : 'http://localhost:8080').replace(/\/$/, '');
+    const base = (typeof API_BASE !== 'undefined' ? API_BASE : 'http://localhost:8081').replace(/\/$/, '');
     const ruta = producto.imagen.startsWith('/') ? producto.imagen : '/' + producto.imagen;
     return base + ruta;
   }

@@ -82,7 +82,7 @@ async function cargarHistorial() {
   estado.textContent = 'Consultando historial...';
 
   try {
-    const resp = await fetch('http://localhost:8080/api/pedidos', {
+    const resp = await fetch('http://localhost:8081/api/pedidos', {
       headers: { Authorization: 'Bearer ' + sesion.token }
     });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -122,7 +122,7 @@ async function cancelarPedido(pedidoId) {
 
   const estado = document.getElementById('estado');
   try {
-    const resp = await fetch('http://localhost:8080/api/pedidos/' + pedidoId + '/cancelar', {
+    const resp = await fetch('http://localhost:8081/api/pedidos/' + pedidoId + '/cancelar', {
       method: 'PUT',
       headers: { Authorization: 'Bearer ' + sesion.token }
     });

@@ -32,14 +32,14 @@ npm start
 Deberías ver en la terminal:
 ```
 [db] Tablas verificadas/creadas correctamente.
-[server] Backend corriendo en http://localhost:8080
+[server] Backend corriendo en http://localhost:8081
 ```
 
 Las tablas (`clientes`, `datos_sensibles`, `atenciones`) se crean automáticamente la primera vez que arranca — no necesitas ejecutar ningún script SQL a mano.
 
 ## 5. Probar
 
-Abre en el navegador: `http://localhost:8080/api/clientes` → deberías ver `[]` (lista vacía) si aún no has registrado a nadie.
+Abre en el navegador: `http://localhost:8081/api/clientes` → deberías ver `[]` (lista vacía) si aún no has registrado a nadie.
 
 Con el backend corriendo, abre `frontend/registro.html` en el navegador, llena el formulario y dale a "Registrar cliente". Luego revisa `frontend/admin-clientes.html` para verlo listado.
 

@@ -88,11 +88,11 @@
   </div>
 </nav>
 
-<header class="hero py-5">
-  <div class="container py-4">
-    <div class="eyebrow mb-2" data-i18n="hero_index_eyebrow">Catálogo institucional 2026</div>
-    <h1 class="display-serif mb-3" data-i18n="hero_index_title">Dotación y suministro para unidades policiales</h1>
-    <p class="lead col-lg-7" data-i18n="hero_index_lead">Uniformes, equipo táctico, papelería institucional y elementos de oficina, con despacho directo a la instalación registrada. Pedidos, seguimiento y soporte disponibles las 24 horas.</p>
+<header class="hero py-3">
+  <div class="container py-2">
+    <div class="eyebrow mb-1" data-i18n="hero_index_eyebrow">Catálogo institucional 2026</div>
+    <h1 class="display-serif mb-2" data-i18n="hero_index_title">Dotación y suministro para unidades policiales</h1>
+    <p class="lead col-lg-7 mb-0" data-i18n="hero_index_lead">Uniformes, equipo táctico, papelería institucional y elementos de oficina, con despacho directo a la instalación registrada. Pedidos, seguimiento y soporte disponibles las 24 horas.</p>
   </div>
 </header>
 
@@ -103,12 +103,88 @@
   </div>
 
   <div id="estado-productos" class="text-muted small mb-3"></div>
-  <div class="mb-4">
-  <label for="filtroCategoria" class="form-label small" data-i18n="products_filter_category">Filtrar por categoría:</label>
-  <select id="filtroCategoria" class="form-select form-select-sm" style="max-width:300px;">
-    <option value="" data-i18n="products_filter_all">Todas</option>
-  </select>
+  <!-- BARRA DE FILTROS -->
+<div class="filtros-catalogo mb-4">
+
+  <!-- MACRO-CATEGORÍAS -->
+  <div class="filtro-bloque filtro-macro">
+    <div class="filtro-titulo">MACRO-CATEGORÍAS</div>
+
+    <div class="macro-opciones">
+      <button type="button" class="macro-btn activo">
+        Ver Todo
+      </button>
+
+      <button type="button" class="macro-btn">
+        👕 Vestimenta & Moda
+      </button>
+
+      <button type="button" class="macro-btn">
+        🔧 Herramientas & Equipos
+      </button>
+    </div>
   </div>
+
+  <!-- FILTROS PRINCIPALES -->
+  <div class="filtros-principales">
+
+    <div class="filtro-item">
+      <label for="filtroCategoria">TIPO DE PRODUCTO</label>
+
+      <select id="filtroCategoria" class="filtro-select">
+        <option value="">Todos los productos</option>
+      </select>
+    </div>
+
+
+    <div class="filtro-item">
+      <label for="filtroTalla">ESPECIFICACIÓN / TALLA</label>
+
+      <select id="filtroTalla" class="filtro-select">
+        <option value="">S, M, L, XL...</option>
+        <option value="S">S</option>
+        <option value="M">M</option>
+        <option value="L">L</option>
+        <option value="XL">XL</option>
+      </select>
+    </div>
+
+
+    <div class="filtro-item">
+      <label for="filtroMarca">MARCA DESTACADA</label>
+
+      <select id="filtroMarca" class="filtro-select">
+        <option value="">Todas las marcas</option>
+        <option value="Bosch">Bosch</option>
+        <option value="Nike">Nike</option>
+        <option value="Levi's">Levi's</option>
+      </select>
+    </div>
+
+
+    <div class="filtro-precio">
+      <label>RANGO DE PRECIO</label>
+
+      <div class="precio-slider">
+        <input type="range" min="0" max="1000000" value="0">
+        <input type="range" min="0" max="1000000" value="1000000">
+      </div>
+    </div>
+
+
+    <div class="filtro-chips">
+      <label>CHIPS</label>
+
+      <div class="chips-list">
+        <button type="button" class="chip">Ofertas</button>
+        <button type="button" class="chip">Envío Gratis</button>
+        <button type="button" class="chip">Nuevos</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
 
   <!-- El grid de productos se genera dinámicamente desde /api/productos -->
   <div class="row g-4" id="catalogo-grid"></div>
@@ -218,7 +294,7 @@
     const sinStock = Number(p.cantidad_disponible) <= 0;
     const detalleUrl = 'producto-detalle.html?id=' + encodeURIComponent(p.id);
     return `
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="card card-producto h-100 p-3">
           <a href="${detalleUrl}" class="producto-img-placeholder">
             <img src="${imgProducto(p)}" alt="${escapeHtml(p.nombre)}" loading="lazy">

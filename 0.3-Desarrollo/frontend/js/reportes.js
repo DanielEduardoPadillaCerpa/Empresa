@@ -30,7 +30,7 @@ async function cargarReporte() {
     return;
   }
 
-  const base = (typeof API_BASE !== 'undefined') ? API_BASE : 'http://localhost:8080';
+  const base = (typeof API_BASE !== 'undefined') ? API_BASE : 'http://localhost:8081';
   const estado = document.getElementById('reportes-estado');
 
   try {
