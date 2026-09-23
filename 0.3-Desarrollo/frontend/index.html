@@ -116,11 +116,11 @@
       </button>
 
       <button type="button" class="macro-btn">
-        👕 Vestimenta & Moda
+       Vestimenta & Moda
       </button>
 
       <button type="button" class="macro-btn">
-        🔧 Herramientas & Equipos
+       Herramientas & Equipos
       </button>
     </div>
   </div>
@@ -198,13 +198,13 @@
 </footer>
 
 <!-- Carrito lateral -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="carritoOffcanvas">
-  <div class="offcanvas-header" style="background:var(--navy-900); color:var(--paper-50);">
+<div class="offcanvas offcanvas-end" tabindex="-1" id="carritoOffcanvas" style="width: 420px;">
+  <div class="offcanvas-header" style="background:var(--navy-900); color:var(--paper-50); border-bottom:1px solid rgba(255,255,255,.12);">
     <h5 class="offcanvas-title display-serif h6 mb-0" data-i18n="cart_title">Tu carrito</h5>
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
   </div>
 
-  <div class="offcanvas-body p-0 d-flex flex-column">
+  <div class="offcanvas-body p-0 d-flex flex-column" style="background-color: #f6f7f9;">
     <div id="carrito-aviso-restringido" class="aviso-sensible m-3" style="display:none;">
       <span data-i18n="cart_restricted_notice_pre">
         Tu carrito incluye equipo táctico restringido. Para completar este pedido necesitarás
@@ -213,20 +213,41 @@
       <a href="registro.html" data-i18n="cart_restricted_notice_link">formulario de registro</a>.
     </div>
 
-    <div id="carrito-items" class="flex-grow-1 overflow-auto"></div>
+    <div id="carrito-items" class="flex-grow-1 overflow-auto p-3"></div>
 
-    <div class="p-3 border-top">
-      <div class="d-flex justify-content-between mb-3">
-        <span class="fw-semibold" data-i18n="cart_total_label">Total</span>
-        <span id="carrito-total" class="precio">$0</span>
+    <div class="p-3 bg-white border-top shadow-sm" style="font-family: 'Segoe UI', sans-serif;">
+      <div class="d-flex justify-content-between mb-2" style="font-size: 14px; color: #333;">
+        <span data-i18n="cart_subtotal_label">Subtotal (<span id="carrito-cantidad-items">0</span> artículos):</span>
+        <span id="carrito-subtotal" class="fw-semibold">$0 COP</span>
       </div>
 
-      <button type="button" class="btn btn-dark w-100" onclick="confirmarCompra()" data-i18n="cart_continue_btn">
-        Confirmar compra
+      <hr style="border-top: 1px solid #dee2e6; margin: 12px 0;">
+
+      <div class="d-flex justify-content-between mb-3" style="font-size: 16px; color: #111;">
+        <span class="fw-bold" data-i18n="cart_total_label">Total a pagar:</span>
+        <span id="carrito-total" class="fw-bold text-dark" style="font-size: 17px;">$0 COP</span>
+      </div>
+
+      <div class="d-flex gap-2 mb-3">
+        <input type="text" id="cuponDescuento" class="form-control" placeholder="Código de Descuento" style="font-size: 14px; border-radius: 4px; padding: 8px 12px; border: 1px solid #ced4da;">
+        <button type="button" class="btn btn-outline-dark" onclick="aplicarCupon()" style="font-size: 14px; border-radius: 4px; background-color: #232f3e; color: white; border: none; padding: 0 16px;">
+          Aplicar
+        </button>
+      </div>
+
+      <button type="button" class="btn w-100 fw-bold text-white mb-2" onclick="confirmarCompra()" style="background-color: #2e7d32; border-radius: 4px; padding: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border: none;">
+        Proceder al pago seguro
       </button>
+
+      <div class="text-center mt-2">
+        <a href="#" class="text-decoration-underline text-secondary" data-bs-dismiss="offcanvas" style="font-size: 13px;">
+          ← Continuar Comprando
+        </a>
+      </div>
     </div>
   </div>
 </div>
+
 
 <!-- Chatbot flotante -->
 <div id="chatbot-toggle" onclick="cbToggle()" title="Atención al cliente">
