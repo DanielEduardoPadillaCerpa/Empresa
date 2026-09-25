@@ -37,13 +37,14 @@ function agregarAlCarrito(boton) {
   const nombre = boton.dataset.nombre;
   const precio = parseInt(boton.dataset.precio, 10);
   const restringido = boton.dataset.restringido === 'true';
+  const imagen = boton.dataset.imagen || '';
 
   const items = carritoLeer();
   const existente = items.find(i => i.id === id);
   if (existente) {
     existente.cantidad += 1;
   } else {
-    items.push({ id, nombre, precio, restringido, cantidad: 1 });
+    items.push({ id, nombre, precio, restringido, imagen, cantidad: 1 });
   }
   carritoGuardar(items);
 
@@ -92,15 +93,19 @@ function carritoRenderPanel() {
   const items = carritoLeer();
   const subtotal = carritoTotal(items);
   const cantidadTotal = items.reduce((sum, i) => sum + i.cantidad, 0);
+  const total = subtotal;
   const t = (typeof textoI18n === 'function') ? textoI18n : (_clave, fallback) => fallback;
 
   const subtotalEl = document.getElementById('carrito-subtotal');
   const totalEl = document.getElementById('carrito-total');
   const cantidadEl = document.getElementById('carrito-cantidad-items');
 
+  [cantidadEl, subtotalEl, totalEl].forEach(el => {
+    if (el) el.removeAttribute('data-i18n');
+  });
   if (cantidadEl) cantidadEl.textContent = cantidadTotal;
   if (subtotalEl) subtotalEl.textContent = formatoMoneda(subtotal);
-  if (totalEl) totalEl.textContent = formatoMoneda(subtotal);
+  if (totalEl) totalEl.textContent = formatoMoneda(total);
 
   const avisoEl = document.getElementById('carrito-aviso-restringido');
   if (avisoEl) {
@@ -110,42 +115,58 @@ function carritoRenderPanel() {
 
   if (!items.length) {
     cont.innerHTML = `
-      <div class="text-center text-muted py-5">
-        <div class="mb-2" style="font-size: 2rem;">🛒</div>
-        <p class="mb-0 small">${t('cart_empty', 'Tu carrito está vacío.')}</p>
+      <div class="carrito-vacio">
+        <div>
+          <div class="mb-2" style="font-size: 2rem;">🛒</div>
+          <p class="mb-0 small">${t('cart_empty', 'Tu carrito está vacío.')}</p>
+        </div>
       </div>`;
     return;
   }
 
-  cont.innerHTML = items.map(i => `
-    <div class="d-flex align-items-start justify-content-between border-bottom py-3" style="gap: 12px;">
-      <div class="flex-grow-1 min-width-0">
-        <div class="d-flex justify-content-between align-items-start" style="gap: 12px;">
-          <div class="fw-semibold" style="font-size: 15px; line-height: 1.3; color: #1c1c1c;">${i.nombre}</div>
-          <button type="button" class="btn btn-link text-danger p-0 carrito-quitar-btn" data-id="${i.id}" style="font-size: 13px; text-decoration: none;">Quitar</button>
+  const itemMarkup = items.map(i => {
+    const imagen = i.imagen || imgPlaceholderProducto(i.nombre, i.restringido ? 1 : 2);
+    return `
+      <article class="carrito-producto" data-id="${i.id}">
+        <div class="carrito-producto__thumb">
+          <img src="${imagen}" alt="${i.nombre}">
         </div>
 
-        <div class="d-flex align-items-center mt-2" style="gap: 10px; flex-wrap: wrap;">
-          <div class="d-flex align-items-center border rounded" style="background:#fff; overflow:hidden;">
-            <button type="button" class="btn btn-link btn-sm px-2 py-1 text-dark carrito-cantidad-btn" data-id="${i.id}" data-accion="restar" style="text-decoration:none; font-size: 18px; line-height: 1;">−</button>
-            <input type="number" min="1" value="${i.cantidad}" class="carrito-cantidad-input border-0 text-center" data-id="${i.id}" style="width: 52px; height: 32px; background: transparent; outline: none; font-size: 14px;">
-            <button type="button" class="btn btn-link btn-sm px-2 py-1 text-dark carrito-cantidad-btn" data-id="${i.id}" data-accion="sumar" style="text-decoration:none; font-size: 18px; line-height: 1;">+</button>
+        <div class="carrito-producto__info">
+          <h3 class="carrito-producto__title">${i.nombre}</h3>
+          <p class="carrito-producto__desc">${i.restringido ? 'Equipo restringido /' : 'Producto institucional /'} ${i.nombre}</p>
+
+          <div class="carrito-producto__meta">
+            <div class="carrito-cantidad-control">
+              <button type="button" class="carrito-cantidad-btn" data-id="${i.id}" data-accion="restar" aria-label="Disminuir cantidad">−</button>
+              <input type="number" min="1" value="${i.cantidad}" class="carrito-cantidad-input" data-id="${i.id}" aria-label="Cantidad de producto">
+              <button type="button" class="carrito-cantidad-btn" data-id="${i.id}" data-accion="sumar" aria-label="Aumentar cantidad">+</button>
+            </div>
           </div>
-          <span class="small text-muted">× ${formatoMoneda(i.precio)}</span>
         </div>
 
-        ${i.restringido ? `<div class="mt-2"><span class="badge rounded-pill bg-warning text-dark small">${t('cart_restricted_badge', 'Equipo restringido')}</span></div>` : ''}
-      </div>
+        <div>
+          <div class="carrito-producto__price">${formatoMoneda(i.precio * i.cantidad)}</div>
+          <button type="button" class="carrito-producto__remove carrito-quitar-btn" data-id="${i.id}">Eliminar</button>
+        </div>
+      </article>
+    `;
+  }).join('');
 
-      <div class="fw-semibold text-end" style="min-width: 96px; font-size: 14px; color: #1d1d1d;">
-        ${formatoMoneda(i.precio * i.cantidad)}
-      </div>
+  cont.innerHTML = `
+    <div class="carrito-header" style="display:flex; justify-content:space-between; align-items:center; margin:0 0 20px; padding: 0 4px;">
+      <h2 style="margin:0; font-size: 1.05rem; font-weight:700; letter-spacing:-.02em; color:#1e2a39;">Carrito de Compras <span style="font-weight:600; color:#5c6877;">(${cantidadTotal} ${cantidadTotal === 1 ? 'producto' : 'productos'})</span></h2>
+      <button type="button" class="btn btn-outline-dark btn-sm" onclick="carritoVaciar()">Vaciar Carrito</button>
     </div>
-  `).join('');
+    ${itemMarkup}
+  `;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Leer primero localStorage y actualizar el badge antes de enlazar controles.
+  // Ninguna inicialización de UI debe reemplazar el estado persistido.
   carritoActualizarBadge();
+  carritoRenderPanel();
   const panel = document.getElementById('carritoOffcanvas');
   if (panel) panel.addEventListener('show.bs.offcanvas', carritoRenderPanel);
 
@@ -186,7 +207,7 @@ async function confirmarCompra() {
   const items = carritoLeer();
   if (!items.length) {
     const t = (typeof textoI18n === 'function') ? textoI18n : (_c, fb) => fb;
-    alert(t('cart_empty_alert', 'Tu carrito está vacío. Agrega productos antes de continuar.'));
+    mostrarNotificacion(t('cart_empty_alert', 'Tu carrito está vacío. Agrega productos antes de continuar.'), 'info');
     return;
   }
 

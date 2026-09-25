@@ -8,57 +8,11 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="css/style.css">
 <style>
-  /* ── Métodos de pago ── */
-  .metodo-pago {
-    border: 2px solid rgba(11,35,64,0.15);
-    border-radius: 10px;
-    padding: 1rem 1.2rem;
-    cursor: pointer;
-    transition: border-color .18s, background .18s;
-    user-select: none;
-  }
-  .metodo-pago:hover { border-color: var(--brass-600, #b08d57); }
-  .metodo-pago.seleccionado {
-    border-color: var(--brass-600, #b08d57);
-    background: rgba(176,141,87,0.07);
-  }
-  .metodo-pago input[type="radio"] {
-    accent-color: var(--brass-600, #b08d57);
-    margin-right: .6rem;
-  }
-  .metodo-logo { font-size: 1.4rem; margin-right: .5rem; }
-  .metodo-pago strong { font-size: .97rem; }
-  .metodo-pago small  { color: #6c757d; }
-
-  /* ── Pasos ── */
-  .paso-titulo {
-    font-size: .72rem; text-transform: uppercase;
-    letter-spacing: .07em; color: #6c757d;
-    display: flex; align-items: center;
-    margin-bottom: .75rem; margin-top: 1.5rem;
-  }
-  .paso-numero {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 1.6rem; height: 1.6rem; border-radius: 50%;
-    background: var(--navy-900, #0b2340); color: #fff;
-    font-size: .72rem; font-weight: 700; margin-right: .5rem;
-  }
-
-  /* ── Resumen ── */
-  .resumen-card {
-    background: var(--paper-50, #fafaf7);
-    border: 1px solid rgba(11,35,64,0.12);
-    border-radius: 10px;
-    padding: 1.4rem;
-    position: sticky; top: 1.5rem;
-  }
   .precio-total {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 1.3rem; font-weight: 700;
+    font-size: 1.5rem; font-weight: 700;
     color: var(--navy-900, #0b2340);
   }
-
-  /* ── Overlay procesando ── */
   #overlay-procesando {
     position: fixed; inset: 0;
     background: rgba(11,35,64,0.90);
@@ -69,8 +23,6 @@
   }
   .overlay-titulo { font-size: 1.15rem; font-weight: 600; }
   .overlay-sub    { font-size: .88rem;  opacity: .75; }
-
-  /* ── Resultados ── */
   .resultado-aprobado {
     background: #d1fae5; border: 1px solid #6ee7b7;
     color: #065f46; border-radius: 10px; padding: 2rem 1.5rem;
@@ -83,8 +35,6 @@
     background: #fef3c7; border: 1px solid #fcd34d;
     color: #92400e; border-radius: 10px; padding: 2rem 1.5rem;
   }
-
-  /* ── Aviso restringido ── */
   .aviso-sensible {
     background: rgba(139,46,46,0.06);
     border: 1px solid var(--tag-sensible, #8b2e2e);
@@ -92,28 +42,98 @@
     font-size: .85rem; color: #5a1e1e;
   }
   .aviso-sensible a { color: #8b2e2e; }
-
-  /* ── SSL badge ── */
   .badge-ssl {
     display: inline-flex; align-items: center; gap: .3rem;
-    font-size: .75rem; padding: .25rem .65rem;
+    font-size: .72rem; padding: .25rem .6rem;
     border-radius: 20px; background: #d1fae5; color: #065f46;
   }
   .badge-ssl.azul { background: #dbeafe; color: #1e40af; }
+  .badge-ssl.gris { background: #e5e7eb; color: #374151; }
 
-  /* ── Sección tarjeta / PSE ── */
-  .seccion-metodo {
-    background: var(--paper-50, #fafaf7);
-    border: 1px solid rgba(11,35,64,0.12);
-    border-radius: 8px; padding: 1.1rem 1.2rem;
-    margin-bottom: 1rem;
+  /* ── Tarjetas blancas del formulario ── */
+  .tarjeta-form {
+    border: 1px solid rgba(11,35,64,.12); border-radius: 12px;
+    padding: 1.4rem 1.5rem; background: #fff; margin-bottom: 1.1rem;
+  }
+  .tarjeta-form-titulo {
+    font-weight: 700; font-size: 1rem; color: var(--navy-900, #0b2340);
+    margin-bottom: 1.1rem;
+  }
+
+  /* ── Switch Persona natural / Empresa (dentro de la primera tarjeta) ── */
+  .switch-tipo-comprador {
+    display: inline-flex; background: #eef0f2; border-radius: 999px;
+    padding: 4px; gap: 4px; margin-bottom: 1.3rem;
+  }
+  .switch-tab {
+    border: none; background: transparent; padding: .5rem 1.1rem;
+    border-radius: 999px; font-size: .84rem; font-weight: 600;
+    color: #55606b; cursor: pointer; transition: background .15s, color .15s;
+  }
+  .switch-tab.activo {
+    background: #fff; color: var(--navy-900, #0b2340);
+    box-shadow: 0 1px 4px rgba(0,0,0,.15);
+  }
+
+  /* ── Tus artículos: filas ── */
+  .articulo-fila {
+    display: flex; align-items: center; gap: .9rem;
+    padding: .8rem 0; border-bottom: 1px solid rgba(11,35,64,.08);
+  }
+  .articulo-fila:last-child { border-bottom: none; padding-bottom: 0; }
+  .articulo-fila:first-child { padding-top: 0; }
+  .articulo-thumb {
+    width: 56px; height: 56px; border-radius: 8px; object-fit: cover;
+    background: #f1efe9; flex: 0 0 auto;
+  }
+
+  /* ── Resumen de compra ── */
+  .resumen-sticky-wrap { position: sticky; top: 1.5rem; }
+  .badge-trust {
+    font-size: .68rem; background: #d1fae5; color: #065f46;
+    border-radius: 20px; padding: .3rem .65rem; display: inline-flex; align-items: center; gap: .3rem;
+  }
+  .badge-trust.azul { background: #dbeafe; color: #1e40af; }
+  .btn-pagar-verde {
+    background: #4fbfa8; border: none; color: #fff; font-weight: 700; letter-spacing: .02em;
+  }
+  .btn-pagar-verde:hover { background: #3fa593; color: #fff; }
+
+  .formas-pago-titulo {
+    font-size: .78rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; color: #55606b; margin: 1.2rem 0 .7rem;
+  }
+  .metodos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+  .metodo-fila {
+    grid-column: span 1;
+    display: flex; align-items: center; gap: .65rem;
+    border: 1.5px solid rgba(11,35,64,.15); border-radius: 8px;
+    padding: .65rem .9rem; cursor: pointer; background: #fff;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .metodo-fila.full { grid-column: 1 / -1; }
+  .metodo-fila:hover { border-color: var(--brass-600, #b08d57); }
+  .metodo-fila.seleccionada { border-color: var(--navy-900, #0b2340); box-shadow: 0 0 0 1px var(--navy-900, #0b2340) inset; }
+  .radio-visual {
+    width: 18px; height: 18px; border-radius: 50%; border: 2px solid #99a3ad;
+    flex: 0 0 auto; position: relative;
+  }
+  .metodo-fila.seleccionada .radio-visual { border-color: var(--navy-900, #0b2340); }
+  .metodo-fila.seleccionada .radio-visual::after {
+    content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--navy-900, #0b2340);
+  }
+  .logo-pago { font-weight: 700; font-size: .88rem; color: var(--navy-900, #0b2340); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .seccion-metodo-detalle {
+    background: var(--paper-50, #fafaf7); border: 1px solid rgba(11,35,64,.1);
+    border-radius: 8px; padding: 1rem; margin-top: .75rem;
   }
 </style>
 </head>
 <body>
 
 <!-- ════════════════════ NAV ════════════════════ -->
-<nav class="navbar navbar-expand-lg navbar-institucional py-3">
+<nav class="navbar navbar-expand-lg navbar-institucional py-2">
   <div class="container">
     <a class="navbar-brand" href="index.html">
       <span>Suministros Institucionales</span>
@@ -128,14 +148,10 @@
 </nav>
 
 <!-- ════════════════════ HERO ════════════════════ -->
-<header class="hero py-4">
-  <div class="container py-2">
+<header class="hero py-1 center text-center">
+  <div class="container py-1">
     <div class="eyebrow mb-1">Paso final · Compra segura</div>
-    <h1 class="display-serif h3 mb-2">Finalizar pedido</h1>
-    <div class="d-flex flex-wrap gap-2">
-      <span class="badge-ssl">🔒 Conexión cifrada SSL</span>
-      <span class="badge-ssl azul">🏦 Pasarela de pago integrada</span>
-    </div>
+    <h1 class="display-serif h3 mb-1">Finalizar pedido</h1>
   </div>
 </header>
 
@@ -146,207 +162,325 @@
   <div id="checkout-vacio" class="text-center py-5" style="display:none;">
     <div style="font-size:3.5rem;">🛒</div>
     <h2 class="h5 mt-3">Tu carrito está vacío</h2>
-    <p class="text-muted">Agrega productos antes depagar  <a href="index.html" class="btn btn-dark mt-2">Ir al catálogo</a>
+    <p class="text-muted">Agrega productos antes de pagar  <a href="index.html" class="btn btn-dark mt-2">Ir al catálogo</a>
   </div>
 
-  <!-- Resultado del pago (aparece tras procesar) -->
+  <!-- Resultado del pago -->
   <div id="resultado-pago" style="display:none;" class="mb-4"></div>
 
   <!-- Formulario principal -->
-  <div id="checkout-contenido" class="row g-5" style="display:none;">
+  <div id="checkout-contenido" class="row g-4" style="display:none;">
 
-    <!-- ── Col izquierda ── -->
-    <div class="col-lg-7">
+    <!-- ══════════════ COL IZQUIERDA ══════════════ -->
+    <div class="col-lg-6">
 
-      <!-- Paso 1: Dirección -->
-      <div class="paso-titulo" style="margin-top:0;">
-        <span class="paso-numero">1</span> Dirección de entrega
-      </div>
-      <div class="mb-2">
-        <label class="form-label small">Dirección completa de la instalación</label>
-        <input type="text" id="direccionEntrega" class="form-control"
-          placeholder="Ej. Cra 7 # 32-16, Bogotá D.C." required>
-        <div class="form-text">Puedes modificar la dirección solo para este pedido.</div>
-      </div>
-      <div id="aviso-restringido-checkout" class="aviso-sensible mb-3" style="display:none;">
-        ⚠️ Tu pedido incluye <strong>equipo táctico restringido</strong>. Para procesar la entrega
-        necesitas tener registrada la autorización de antecedentes en tu
-        <a href="registro.html">ficha de cliente</a>.
-      </div>
-
-      <!-- Paso 2: Método de pago -->
-      <div class="paso-titulo">
-        <span class="paso-numero">2</span> Método de pago
-      </div>
-      <div class="d-flex flex-column gap-3 mb-3" id="metodos-pago">
-
-        <label class="metodo-pago d-flex align-items-center">
-          <input type="radio" name="metodoPago" value="PSE" checked>
-          <span class="metodo-logo">🏦</span>
-          <span>
-            <strong>PSE</strong> — Pagos Seguros en Línea
-            <br><small>Débito bancario · Bancolombia, Davivienda, BBVA y más</small>
-          </span>
-        </label>
-
-        <label class="metodo-pago d-flex align-items-center">
-          <input type="radio" name="metodoPago" value="TARJETA">
-          <span class="metodo-logo">💳</span>
-          <span>
-            <strong>Tarjeta de crédito / débito</strong>
-            <br><small>Visa · MasterCard · American Express</small>
-          </span>
-        </label>
-
-        <label class="metodo-pago d-flex align-items-center">
-          <input type="radio" name="metodoPago" value="NEQUI">
-          <span class="metodo-logo">📱</span>
-          <span>
-            <strong>Nequi</strong>
-            <br><small>Pago desde la app Nequi</small>
-          </span>
-        </label>
-
-        <label class="metodo-pago d-flex align-items-center">
-          <input type="radio" name="metodoPago" value="DAVIPLATA">
-          <span class="metodo-logo">📲</span>
-          <span>
-            <strong>Daviplata</strong>
-            <br><small>Pago desde la app Daviplata</small>
-          </span>
-        </label>
-
-        <label class="metodo-pago d-flex align-items-center">
-          <input type="radio" name="metodoPago" value="CONTRAENTREGA">
-          <span class="metodo-logo">🏠</span>
-          <span>
-            <strong>Pago contra entrega</strong>
-            <br><small>Pagas cuando recibes el pedido en la instalación</small>
-          </span>
-        </label>
-
-      </div>
-
-      <!-- Panel PSE -->
-      <div id="seccion-pse" class="seccion-metodo">
-        <p class="small text-muted mb-2">
-          🔒 Serás redirigido a la pasarela de tu banco para autorizar el débito de forma segura.
-        </p>
-        <div class="mb-2">
-          <label class="form-label small">Banco</label>
-          <select id="pseBanco" class="form-select">
-            <option value="">— Selecciona tu banco —</option>
-            <option value="bancolombia">Bancolombia</option>
-            <option value="davivienda">Davivienda</option>
-            <option value="bbva">BBVA</option>
-            <option value="bogota">Banco de Bogotá</option>
-            <option value="occidente">Banco de Occidente</option>
-            <option value="popular">Banco Popular</option>
-            <option value="itau">Itaú</option>
-            <option value="scotiabank">Scotiabank Colpatria</option>
-            <option value="nacion">Banco de la Nación</option>
-          </select>
+      <!-- Tarjeta 1: Identificación (con tabs de tipo de comprador) -->
+      <div class="tarjeta-form">
+        <div class="switch-tipo-comprador">
+          <button type="button" class="switch-tab activo" id="tab-natural" onclick="seleccionarTipoComprador('natural')">⚡ Persona Natural</button>
+          <button type="button" class="switch-tab" id="tab-empresa" onclick="seleccionarTipoComprador('empresa')">🏢 Empresa</button>
         </div>
-        <div>
-          <label class="form-label small">Tipo de cuenta</label>
-          <select id="pseTipoCuenta" class="form-select">
-            <option value="ahorros">Ahorros</option>
-            <option value="corriente">Corriente</option>
-          </select>
-        </div>
-      </div>
 
-      <!-- Panel Tarjeta -->
-      <div id="seccion-tarjeta" class="seccion-metodo" style="display:none;">
-        <p class="small text-muted mb-2">🔒 Datos cifrados con TLS 1.3 — nunca almacenamos tu número de tarjeta.</p>
-        <div class="mb-2">
-          <label class="form-label small">Número de tarjeta</label>
-          <input type="text" id="tarjetaNumero" class="form-control"
-            placeholder="0000 0000 0000 0000" maxlength="19" inputmode="numeric">
-        </div>
-        <div class="row g-2 mb-2">
-          <div class="col-6">
-            <label class="form-label small">Vencimiento</label>
-            <input type="text" id="tarjetaVencimiento" class="form-control"
-              placeholder="MM/AA" maxlength="5">
+        <div id="checkout-error" class="alert alert-danger small mb-3" style="display:none;" role="alert"></div>
+
+        <!-- Campos Persona Natural -->
+        <div id="campos-identificacion-natural">
+          <div class="mb-2">
+            <label class="form-label small">RUT/NIT</label>
+            <input type="text" id="rutNitNat" class="form-control" placeholder="Cédula, RUT o NIT">
           </div>
-          <div class="col-6">
-            <label class="form-label small">CVV</label>
-            <input type="text" id="tarjetaCvv" class="form-control"
-              placeholder="123" maxlength="4" inputmode="numeric">
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label small">Nombre Completo</label>
+              <input type="text" id="nombreCompletoNat" class="form-control" placeholder="Nombre y apellido">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small">Teléfono de Contacto</label>
+              <input type="text" id="telefonoContactoNat" class="form-control" placeholder="(300) 000 0000">
+            </div>
           </div>
         </div>
-        <div>
-          <label class="form-label small">Nombre del titular</label>
-          <input type="text" id="tarjetaTitular" class="form-control"
-            placeholder="Como aparece en la tarjeta">
+
+        <!-- Campos Empresa -->
+        <div id="campos-identificacion-empresa" style="display:none;">
+          <div class="row g-2 mb-2">
+            <div class="col-md-6">
+              <label class="form-label small">Razón Social</label>
+              <input type="text" id="empresaRazonSocial" class="form-control" placeholder="Empresa de Suministros S.A.S.">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small">NIT</label>
+              <input type="text" id="empresaNit" class="form-control" placeholder="900.123.456-7">
+            </div>
+          </div>
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label small">Comprador Autorizado</label>
+              <input type="text" id="empresaComprador" class="form-control" placeholder="Nombre y apellido">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small">Teléfono de Contacto</label>
+              <input type="text" id="empresaTelefono" class="form-control" placeholder="(601) 000 0000">
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Panel Nequi -->
-      <div id="seccion-nequi" class="seccion-metodo" style="display:none;">
-        <p class="small text-muted mb-0">
-          📱 Recibirás una notificación push en tu app Nequi para autorizar el pago.
-          Asegúrate de tener el número de celular registrado en tu cuenta Nequi disponible.
-        </p>
+      <!-- Tarjeta 2: Dirección de envío y contacto -->
+      <div class="tarjeta-form">
+        <div class="tarjeta-form-titulo">Dirección de Envío y Contacto</div>
+
+        <div id="direccion-natural">
+          <div class="row g-2 mb-2">
+            <div class="col-md-4">
+              <label class="form-label small">País</label>
+              <select id="paisNat" class="form-select">
+                <option value="Colombia" selected>Colombia</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Departamento/Estado</label>
+              <select id="departamentoNat" class="form-select">
+                <option value="">— Selecciona —</option>
+                <option>Bogotá D.C.</option>
+                <option>Antioquia</option>
+                <option>Valle del Cauca</option>
+                <option>Santander</option>
+                <option>Atlántico</option>
+                <option>Cundinamarca</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Ciudad</label>
+              <input type="text" id="ciudadNat" class="form-control" placeholder="Bogotá">
+            </div>
+          </div>
+          <div class="row g-2">
+            <div class="col-md-8">
+              <label class="form-label small">Dirección Exacta (Calle, Carrera, N°)</label>
+              <input type="text" id="direccionExactaNat" class="form-control" placeholder="Cra 7 # 32-16">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Apto/Interior (Opcional)</label>
+              <input type="text" id="aptoNat" class="form-control" placeholder="Opcional">
+            </div>
+          </div>
+        </div>
+
+        <div id="direccion-empresa" style="display:none;">
+          <div class="row g-2 mb-2">
+            <div class="col-md-4">
+              <label class="form-label small">País</label>
+              <select id="paisEmp" class="form-select">
+                <option value="Colombia" selected>Colombia</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Departamento/Estado</label>
+              <select id="departamentoEmp" class="form-select">
+                <option value="">— Selecciona —</option>
+                <option>Bogotá D.C.</option>
+                <option>Antioquia</option>
+                <option>Valle del Cauca</option>
+                <option>Santander</option>
+                <option>Atlántico</option>
+                <option>Cundinamarca</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Ciudad</label>
+              <input type="text" id="ciudadEmp" class="form-control" placeholder="Bogotá">
+            </div>
+          </div>
+          <div class="row g-2">
+            <div class="col-md-8">
+              <label class="form-label small">Dirección Exacta de la Instalación</label>
+              <input type="text" id="direccionExactaEmp" class="form-control" placeholder="Cra 7 # 32-16">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Apto/Interior (Opcional)</label>
+              <input type="text" id="aptoEmp" class="form-control" placeholder="Opcional">
+            </div>
+          </div>
+        </div>
+
+        <div id="aviso-restringido" class="aviso-sensible mt-3" style="display:none;">
+          ⚠️ Tu pedido incluye <strong>equipo táctico restringido</strong>. Para procesar la entrega
+          necesitas tener registrada la autorización de antecedentes en tu
+          <a href="registro.html">ficha de cliente</a>.
+        </div>
       </div>
 
-      <!-- Panel Daviplata -->
-      <div id="seccion-daviplata" class="seccion-metodo" style="display:none;">
-        <p class="small text-muted mb-0">
-          📲 Recibirás un mensaje en tu app Daviplata para confirmar el pago.
-          Asegúrate de tener saldo disponible en tu cuenta.
-        </p>
+      <!-- Tarjeta 3 (solo empresa): Orden de compra -->
+      <div class="tarjeta-form" id="tarjeta-po" style="display:none;">
+        <div class="tarjeta-form-titulo">Orden de Compra (PO)</div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="empresaVincularPO" onchange="togglePODetalle()">
+          <label class="form-check-label small" for="empresaVincularPO">Vincular orden de compra a este pedido</label>
+        </div>
+        <div id="empresaPoDetalle" class="row g-2" style="display:none;">
+          <div class="col-md-8">
+            <label class="form-label small">Número de PO</label>
+            <input type="text" id="empresaPoNumero" class="form-control" placeholder="PO-000000">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">Soporte de la PO</label>
+            <input type="file" id="empresaPoArchivo" class="form-control">
+          </div>
+        </div>
       </div>
 
-      <!-- Panel Contra entrega -->
-      <div id="seccion-contraentrega" class="seccion-metodo" style="display:none;">
-        <p class="small text-muted mb-0">
-          🏠 El pago se realiza en efectivo o por transferencia al momento de recibir el pedido
-          en la instalación. Asegúrate de que el funcionario receptor tenga disponibilidad para pagar.
-        </p>
+      <!-- Tarjeta: Tus artículos -->
+      <div class="tarjeta-form mb-0">
+        <div class="tarjeta-form-titulo">Tus artículos</div>
+        <div id="articulos-lista"></div>
       </div>
 
-      <!-- Error -->
-      <div id="checkout-error" class="alert alert-danger small mb-3" style="display:none;" role="alert"></div>
-
-      <!-- Botón pagar -->
-      <button id="btn-pagar" class="btn btn-dark w-100 py-3"
-        style="font-size:1.05rem; font-weight:600; letter-spacing:.02em;">
-        Pagar
-      </button>
-      <p class="text-center text-muted small mt-2 mb-0">
-        Al confirmar, aceptas nuestros <a href="#">términos</a> y la
-        <a href="registro.html">política de datos</a>.
-      </p>
     </div>
 
-    <!-- ── Col derecha: resumen ── -->
-    <div class="col-lg-5">
-      <div class="resumen-card">
-        <h3 class="h6 mb-3" style="color:var(--navy-900,#0b2340); font-weight:700;">
-          📦 Resumen del pedido
-        </h3>
-        <div id="resumen-items" class="mb-3 small"></div>
-        <hr class="my-2">
+    <!-- ══════════════ COL DERECHA: RESUMEN ══════════════ -->
+    <div class="col-lg-6">
+      <div class="tarjeta-form resumen-sticky-wrap">
+        <div class="tarjeta-form-titulo">Resumen de Compra</div>
+
         <div class="d-flex justify-content-between small mb-1">
           <span class="text-muted">Subtotal</span>
-          <span id="resumen-subtotal">$0</span>
+          <span id="rs-subtotal">$0</span>
         </div>
+        <div class="d-flex justify-content-between small mb-1">
+          <span class="text-muted">Envío</span>
+          <span class="fw-semibold">$0 (Gratis)</span>
+        </div>
+        <div id="rs-iva-row" class="d-flex justify-content-between small mb-2" style="display:none;">
+          <span class="text-muted">IVA e impuestos operativos (19%)</span>
+          <span id="rs-iva">$0</span>
+        </div>
+
         <hr class="my-2">
-        <div class="d-flex justify-content-between align-items-center">
-          <span class="fw-semibold">Total a pagar</span>
-          <span id="resumen-total" class="precio-total">$0</span>
+
+        <div class="d-flex justify-content-between align-items-end mb-3">
+          <span class="fw-bold" id="rs-total-label">Total a Pagar:<br><small class="text-muted fw-normal">IVA incluido</small></span>
+          <span id="rs-total" class="precio-total">$0</span>
         </div>
-        <div class="mt-3 pt-3 border-top small text-muted">
-          🕐 Entrega estimada: <strong class="text-dark">3–5 días hábiles</strong>
-          a la instalación registrada.
+
+        <div class="d-flex gap-2 mb-2">
+          <span class="badge-trust">🔒 Pago seguro</span>
+          <span class="badge-trust azul">🛡️ Compra protegida</span>
         </div>
-        <div class="mt-3">
-          <a href="index.html" class="btn btn-sm btn-outline-secondary w-100">
-            ← Seguir comprando
-          </a>
+
+        <!-- Formas de pago: Persona Natural -->
+        <div id="pago-natural">
+          <div class="formas-pago-titulo">Formas de pago seguras</div>
+          <div class="metodos-grid">
+            <label class="metodo-fila" data-grupo="natural" data-metodo="NEQUI">
+              <span class="radio-visual"></span><span class="logo-pago">NEQUI</span>
+            </label>
+            <label class="metodo-fila" data-grupo="natural" data-metodo="DAVIPLATA">
+              <span class="radio-visual"></span><span class="logo-pago">DAVIPLATA</span>
+            </label>
+            <label class="metodo-fila full" data-grupo="natural" data-metodo="PSE">
+              <span class="radio-visual"></span><span class="logo-pago">PSE</span>
+            </label>
+            <label class="metodo-fila" data-grupo="natural" data-metodo="VISA">
+              <span class="radio-visual"></span><span class="logo-pago">VISA</span>
+            </label>
+            <label class="metodo-fila" data-grupo="natural" data-metodo="MASTERCARD">
+              <span class="radio-visual"></span><span class="logo-pago">MASTERCARD</span>
+            </label>
+            <label class="metodo-fila full" data-grupo="natural" data-metodo="AMEX">
+              <span class="radio-visual"></span><span class="logo-pago">AMEX</span>
+            </label>
+          </div>
+
+          <div id="detalle-pse-nat" class="seccion-metodo-detalle" style="display:none;">
+            <label class="form-label small">Banco</label>
+            <select id="pseBancoNat" class="form-select">
+              <option value="">— Selecciona tu banco —</option>
+              <option value="bancolombia">Bancolombia</option>
+              <option value="davivienda">Davivienda</option>
+              <option value="bbva">BBVA</option>
+              <option value="bogota">Banco de Bogotá</option>
+            </select>
+          </div>
+
+          <div id="detalle-tarjeta-nat" class="seccion-metodo-detalle" style="display:none;">
+            <div class="row g-2">
+              <div class="col-12">
+                <input type="text" id="tarjetaNumeroNat" class="form-control form-control-sm" placeholder="Número de tarjeta" maxlength="19" inputmode="numeric">
+              </div>
+              <div class="col-6">
+                <input type="text" id="tarjetaVencimientoNat" class="form-control form-control-sm" placeholder="MM/AA" maxlength="5">
+              </div>
+              <div class="col-6">
+                <input type="text" id="tarjetaCvvNat" class="form-control form-control-sm" placeholder="CVV" maxlength="4" inputmode="numeric">
+              </div>
+              <div class="col-12">
+                <input type="text" id="tarjetaTitularNat" class="form-control form-control-sm" placeholder="Nombre del titular">
+              </div>
+            </div>
+          </div>
+
+          <button id="btn-pagar-natural" class="btn btn-pagar-verde w-100 py-3 mt-3">CONFIRMAR Y PAGAR AHORA</button>
         </div>
+
+        <!-- Formas de pago: Empresa -->
+        <div id="pago-empresa" style="display:none;">
+          <div class="formas-pago-titulo">Formas de pago corporativas</div>
+          <div class="metodos-grid">
+            <label class="metodo-fila full" data-grupo="empresa" data-metodo="PSE">
+              <span class="radio-visual"></span><span class="logo-pago">PSE — Pagos seguros corporativos</span>
+            </label>
+            <label class="metodo-fila full" data-grupo="empresa" data-metodo="ACH">
+              <span class="radio-visual"></span><span class="logo-pago">Transferencia bancaria ACH</span>
+            </label>
+            <label class="metodo-fila full" data-grupo="empresa" data-metodo="TARJETA">
+              <span class="radio-visual"></span><span class="logo-pago">Tarjeta de crédito corporativa</span>
+            </label>
+          </div>
+
+          <div id="detalle-pse-emp" class="seccion-metodo-detalle" style="display:none;">
+            <label class="form-label small">Banco</label>
+            <select id="pseBancoEmp" class="form-select">
+              <option value="">— Selecciona tu banco —</option>
+              <option value="bancolombia">Bancolombia</option>
+              <option value="davivienda">Davivienda</option>
+              <option value="bbva">BBVA</option>
+              <option value="bogota">Banco de Bogotá</option>
+            </select>
+          </div>
+
+          <div id="detalle-ach-emp" class="seccion-metodo-detalle" style="display:none;">
+            <p class="small text-muted mb-2">Realiza la transferencia ACH a la cuenta indicada y adjunta el comprobante.</p>
+            <label class="form-label small">Cuenta destino</label>
+            <input type="text" class="form-control mb-2" value="Bancolombia · Cuenta corriente 000-000000-00" disabled>
+            <label class="form-label small">Comprobante (opcional)</label>
+            <input type="file" id="achComprobante" class="form-control">
+          </div>
+
+          <div id="detalle-tarjeta-emp" class="seccion-metodo-detalle" style="display:none;">
+            <div class="row g-2">
+              <div class="col-12">
+                <input type="text" id="tarjetaNumeroEmp" class="form-control form-control-sm" placeholder="Número de tarjeta" maxlength="19" inputmode="numeric">
+              </div>
+              <div class="col-6">
+                <input type="text" id="tarjetaVencimientoEmp" class="form-control form-control-sm" placeholder="MM/AA" maxlength="5">
+              </div>
+              <div class="col-6">
+                <input type="text" id="tarjetaCvvEmp" class="form-control form-control-sm" placeholder="CVV" maxlength="4" inputmode="numeric">
+              </div>
+              <div class="col-12">
+                <input type="text" id="tarjetaTitularEmp" class="form-control form-control-sm" placeholder="Nombre del titular">
+              </div>
+            </div>
+          </div>
+
+          <button id="btn-pagar-empresa" class="btn btn-pagar-verde w-100 py-3 mt-3">CONFIRMAR Y AUTORIZAR PEDIDO</button>
+        </div>
+
+        <p class="text-center text-muted small mt-3 mb-0">
+          Al confirmar, aceptas nuestros <a href="#">términos</a> y la
+          <a href="registro.html">política de datos</a>.
+        </p>
       </div>
     </div>
 
@@ -377,7 +511,6 @@
    CHECKOUT — lógica principal
 ═══════════════════════════════════════════════════════ */
 
-// ── Helpers ───────────────────────────────────────────
 function fmt(valor) {
   return '$' + (Number(valor) || 0).toLocaleString('es-CO');
 }
@@ -399,13 +532,39 @@ function ocultarOverlay() {
   document.getElementById('overlay-procesando').style.display = 'none';
 }
 
-// ── Verificar sesión ──────────────────────────────────
 if (!authEstaLogueado()) {
   window.location.href = 'login.html?redirect=checkout.html';
 }
 
-// ── Leer carrito ──────────────────────────────────────
 let items = carritoLeer();
+let tipoComprador = 'natural';
+let metodoNatural = null;   // NEQUI | DAVIPLATA | PSE | VISA | MASTERCARD | AMEX
+let metodoEmpresa = null;   // PSE | ACH | TARJETA
+
+// Métodos que usan el mismo panel de tarjeta
+const METODOS_TARJETA_NAT = ['VISA', 'MASTERCARD', 'AMEX'];
+
+function seleccionarTipoComprador(tipo) {
+  tipoComprador = tipo;
+  document.getElementById('tab-natural').classList.toggle('activo', tipo === 'natural');
+  document.getElementById('tab-empresa').classList.toggle('activo', tipo === 'empresa');
+
+  document.getElementById('campos-identificacion-natural').style.display = tipo === 'natural' ? 'block' : 'none';
+  document.getElementById('campos-identificacion-empresa').style.display = tipo === 'empresa' ? 'block' : 'none';
+  document.getElementById('direccion-natural').style.display = tipo === 'natural' ? 'block' : 'none';
+  document.getElementById('direccion-empresa').style.display = tipo === 'empresa' ? 'block' : 'none';
+  document.getElementById('tarjeta-po').style.display = tipo === 'empresa' ? 'block' : 'none';
+  document.getElementById('pago-natural').style.display = tipo === 'natural' ? 'block' : 'none';
+  document.getElementById('pago-empresa').style.display = tipo === 'empresa' ? 'block' : 'none';
+
+  ocultarError();
+  actualizarResumen();
+}
+
+function togglePODetalle() {
+  const marcado = document.getElementById('empresaVincularPO').checked;
+  document.getElementById('empresaPoDetalle').style.display = marcado ? 'flex' : 'none';
+}
 
 // ── Inicializar página ────────────────────────────────
 (function init() {
@@ -415,94 +574,169 @@ let items = carritoLeer();
   }
   document.getElementById('checkout-contenido').style.display = '';
 
-  // Aviso equipo restringido
   if (items.some(i => i.restringido)) {
-    document.getElementById('aviso-restringido-checkout').style.display = 'block';
+    document.getElementById('aviso-restringido').style.display = 'block';
   }
 
-  // Resumen
-  const total = items.reduce((a, i) => a + i.precio * i.cantidad, 0);
-  document.getElementById('resumen-items').innerHTML = items.map(i => `
-    <div class="d-flex justify-content-between mb-1">
-      <span>${i.nombre} <span class="badge rounded-pill bg-secondary" style="font-size:.6rem;">${i.cantidad}</span></span>
-      <span class="fw-semibold">${fmt(i.precio * i.cantidad)}</span>
-    </div>`).join('');
-  document.getElementById('resumen-subtotal').textContent = fmt(total);
-  document.getElementById('resumen-total').textContent    = fmt(total);
+  actualizarResumen();
 
-  // Pre-rellenar dirección desde sesión si está guardada
   const sesion = authLeer();
   if (sesion?.direccionEntrega) {
-    document.getElementById('direccionEntrega').value = sesion.direccionEntrega;
+    document.getElementById('direccionExactaNat').value = sesion.direccionEntrega;
   }
 })();
 
-// ── Mapa de paneles por método ────────────────────────
-const PANELES = {
-  PSE:            'seccion-pse',
-  TARJETA:        'seccion-tarjeta',
-  NEQUI:          'seccion-nequi',
-  DAVIPLATA:      'seccion-daviplata',
-  CONTRAENTREGA:  'seccion-contraentrega',
-};
-
-function mostrarPanel(metodo) {
-  Object.values(PANELES).forEach(id => {
-    document.getElementById(id).style.display = 'none';
-  });
-  const panelId = PANELES[metodo];
-  if (panelId) document.getElementById(panelId).style.display = 'block';
+function renderArticulos() {
+  document.getElementById('articulos-lista').innerHTML = items.map(i => `
+    <div class="articulo-fila">
+      <img src="${i.imagen || ''}" alt="${i.nombre}" class="articulo-thumb" onerror="this.style.visibility='hidden'">
+      <div class="flex-grow-1">
+        <div class="fw-semibold small">${i.nombre}</div>
+        <div class="text-muted small">Cantidad: ${i.cantidad} - ${fmt(i.precio)}</div>
+      </div>
+      <div class="text-end">
+        <div class="text-muted small">Subtotal</div>
+        <div class="fw-semibold">${fmt(i.precio * i.cantidad)}</div>
+      </div>
+    </div>`).join('');
 }
 
-// ── Selección método de pago ──────────────────────────
-document.querySelectorAll('.metodo-pago').forEach(label => {
-  label.addEventListener('click', () => {
-    document.querySelectorAll('.metodo-pago').forEach(l => l.classList.remove('seleccionado'));
-    label.classList.add('seleccionado');
-    const val = label.querySelector('input[type="radio"]')?.value;
-    mostrarPanel(val);
+function actualizarResumen() {
+  const total = items.reduce((a, i) => a + i.precio * i.cantidad, 0);
+  renderArticulos();
+
+  document.getElementById('rs-subtotal').textContent = fmt(total);
+
+  const ivaRow = document.getElementById('rs-iva-row');
+  const totalLabel = document.getElementById('rs-total-label');
+
+  if (tipoComprador === 'empresa') {
+    const subtotalNeto = total / 1.19;
+    const iva = total - subtotalNeto;
+    document.getElementById('rs-subtotal').textContent = fmt(subtotalNeto);
+    document.getElementById('rs-iva').textContent = fmt(iva);
+    ivaRow.style.display = 'flex';
+    totalLabel.innerHTML = 'Total Bruto a Pagar:';
+  } else {
+    document.getElementById('rs-subtotal').textContent = fmt(total);
+    ivaRow.style.display = 'none';
+    totalLabel.innerHTML = 'Total a Pagar:<br><small class="text-muted fw-normal">IVA incluido</small>';
+  }
+  document.getElementById('rs-total').textContent = fmt(total);
+}
+
+// ── Selección de método de pago (ambos grupos) ────────
+const PANELES_NAT = { PSE: 'detalle-pse-nat', VISA: 'detalle-tarjeta-nat', MASTERCARD: 'detalle-tarjeta-nat', AMEX: 'detalle-tarjeta-nat' };
+const PANELES_EMP = { PSE: 'detalle-pse-emp', ACH: 'detalle-ach-emp', TARJETA: 'detalle-tarjeta-emp' };
+
+document.querySelectorAll('.metodo-fila[data-grupo="natural"]').forEach(fila => {
+  fila.addEventListener('click', () => {
+    metodoNatural = fila.dataset.metodo;
+    document.querySelectorAll('.metodo-fila[data-grupo="natural"]').forEach(f => f.classList.remove('seleccionada'));
+    fila.classList.add('seleccionada');
+    Object.values(PANELES_NAT).forEach(id => document.getElementById(id).style.display = 'none');
+    if (PANELES_NAT[metodoNatural]) document.getElementById(PANELES_NAT[metodoNatural]).style.display = 'block';
   });
 });
-// PSE seleccionado por defecto
-document.querySelector('.metodo-pago')?.classList.add('seleccionado');
-mostrarPanel('PSE');
 
-// ── Formato automático tarjeta ────────────────────────
-document.getElementById('tarjetaNumero')?.addEventListener('input', function () {
-  this.value = this.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim().slice(0, 19);
-});
-document.getElementById('tarjetaVencimiento')?.addEventListener('input', function () {
-  this.value = this.value.replace(/\D/g, '').replace(/^(\d{2})(\d)/, '$1/$2').slice(0, 5);
-});
-document.getElementById('tarjetaCvv')?.addEventListener('input', function () {
-  this.value = this.value.replace(/\D/g, '');
+document.querySelectorAll('.metodo-fila[data-grupo="empresa"]').forEach(fila => {
+  fila.addEventListener('click', () => {
+    metodoEmpresa = fila.dataset.metodo;
+    document.querySelectorAll('.metodo-fila[data-grupo="empresa"]').forEach(f => f.classList.remove('seleccionada'));
+    fila.classList.add('seleccionada');
+    Object.values(PANELES_EMP).forEach(id => document.getElementById(id).style.display = 'none');
+    if (PANELES_EMP[metodoEmpresa]) document.getElementById(PANELES_EMP[metodoEmpresa]).style.display = 'block';
+  });
 });
 
-// ── Validar campos según método ───────────────────────
-function validarMetodo(metodo) {
-  if (metodo === 'PSE') {
-    if (!document.getElementById('pseBanco').value) {
-      mostrarError('Selecciona tu banco para pagar.');
-      return false;
-    }
+// ── Formato automático de tarjeta ──────────────────────
+function activarFormatoTarjeta(sufijo) {
+  document.getElementById('tarjetaNumero' + sufijo)?.addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim().slice(0, 19);
+  });
+  document.getElementById('tarjetaVencimiento' + sufijo)?.addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').replace(/^(\d{2})(\d)/, '$1/$2').slice(0, 5);
+  });
+  document.getElementById('tarjetaCvv' + sufijo)?.addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '');
+  });
+}
+activarFormatoTarjeta('Nat');
+activarFormatoTarjeta('Emp');
+
+// ── Dirección según tipo de comprador ─────────────────
+function obtenerDireccion() {
+  if (tipoComprador === 'natural') {
+    const direccionExacta = document.getElementById('direccionExactaNat').value.trim();
+    const ciudad = document.getElementById('ciudadNat').value.trim();
+    const departamento = document.getElementById('departamentoNat').value;
+    const pais = document.getElementById('paisNat').value;
+    const apto = document.getElementById('aptoNat').value.trim();
+    if (!direccionExacta) { mostrarError('La dirección exacta es obligatoria.'); return null; }
+    if (!ciudad)          { mostrarError('La ciudad es obligatoria.'); return null; }
+    if (!departamento)    { mostrarError('Selecciona el departamento/estado.'); return null; }
+    return `${direccionExacta}${apto ? ', ' + apto : ''}, ${ciudad}, ${departamento}, ${pais}`;
   }
-  if (metodo === 'TARJETA') {
-    const num  = document.getElementById('tarjetaNumero').value.replace(/\s/g, '');
-    const venc = document.getElementById('tarjetaVencimiento').value;
-    const cvv  = document.getElementById('tarjetaCvv').value;
-    const tit  = document.getElementById('tarjetaTitular').value.trim();
-    if (num.length < 13)              { mostrarError('Ingresa un número de tarjeta válido.'); return false; }
-    if (!/^\d{2}\/\d{2}$/.test(venc)){ mostrarError('Ingresa la fecha en formato MM/AA.');   return false; }
-    if (cvv.length < 3)               { mostrarError('Ingresa el CVV de la tarjeta.');        return false; }
-    if (!tit)                         { mostrarError('Ingresa el nombre del titular.');        return false; }
+  const direccionExacta = document.getElementById('direccionExactaEmp').value.trim();
+  const ciudad = document.getElementById('ciudadEmp').value.trim();
+  const departamento = document.getElementById('departamentoEmp').value;
+  const pais = document.getElementById('paisEmp').value;
+  const apto = document.getElementById('aptoEmp').value.trim();
+  if (!direccionExacta) { mostrarError('La dirección exacta de la instalación es obligatoria.'); return null; }
+  if (!ciudad)          { mostrarError('La ciudad es obligatoria.'); return null; }
+  if (!departamento)    { mostrarError('Selecciona el departamento/estado.'); return null; }
+  return `${direccionExacta}${apto ? ', ' + apto : ''}, ${ciudad}, ${departamento}, ${pais}`;
+}
+
+function validarDatosComprador() {
+  if (tipoComprador === 'natural') {
+    const rutNit = document.getElementById('rutNitNat').value.trim();
+    const nombre = document.getElementById('nombreCompletoNat').value.trim();
+    if (!rutNit) { mostrarError('Ingresa tu RUT/NIT.'); return false; }
+    if (!nombre) { mostrarError('Ingresa tu nombre completo.'); return false; }
+  } else {
+    const razonSocial = document.getElementById('empresaRazonSocial').value.trim();
+    const nit = document.getElementById('empresaNit').value.trim();
+    if (!razonSocial) { mostrarError('Ingresa la razón social de la empresa.'); return false; }
+    if (!nit)         { mostrarError('Ingresa el NIT de la empresa.'); return false; }
   }
   return true;
 }
 
-// ── Simular pasarela de pago ──────────────────────────
-// 90% aprobado · 5% rechazado · 5% pendiente
-// Reemplaza esta función con la SDK de PayU / MercadoPago / Kushki / ePayco
-// cuando tengas las credenciales del proveedor.
+function validarMetodoNatural() {
+  if (!metodoNatural) { mostrarError('Selecciona una forma de pago.'); return false; }
+  if (metodoNatural === 'PSE' && !document.getElementById('pseBancoNat').value) {
+    mostrarError('Selecciona tu banco para pagar con PSE.'); return false;
+  }
+  if (METODOS_TARJETA_NAT.includes(metodoNatural)) {
+    const num  = document.getElementById('tarjetaNumeroNat').value.replace(/\s/g, '');
+    const venc = document.getElementById('tarjetaVencimientoNat').value;
+    const cvv  = document.getElementById('tarjetaCvvNat').value;
+    if (num.length < 13)              { mostrarError('Ingresa un número de tarjeta válido.'); return false; }
+    if (!/^\d{2}\/\d{2}$/.test(venc)){ mostrarError('Ingresa la fecha en formato MM/AA.');   return false; }
+    if (cvv.length < 3)                { mostrarError('Ingresa el CVV de la tarjeta.');        return false; }
+  }
+  return true;
+}
+
+function validarMetodoEmpresa() {
+  if (!metodoEmpresa) { mostrarError('Selecciona una forma de pago.'); return false; }
+  if (metodoEmpresa === 'PSE' && !document.getElementById('pseBancoEmp').value) {
+    mostrarError('Selecciona tu banco para pagar con PSE.'); return false;
+  }
+  if (metodoEmpresa === 'TARJETA') {
+    const num  = document.getElementById('tarjetaNumeroEmp').value.replace(/\s/g, '');
+    const venc = document.getElementById('tarjetaVencimientoEmp').value;
+    const cvv  = document.getElementById('tarjetaCvvEmp').value;
+    const tit  = document.getElementById('tarjetaTitularEmp').value.trim();
+    if (num.length < 13)              { mostrarError('Ingresa un número de tarjeta válido.'); return false; }
+    if (!/^\d{2}\/\d{2}$/.test(venc)){ mostrarError('Ingresa la fecha en formato MM/AA.');   return false; }
+    if (cvv.length < 3)                { mostrarError('Ingresa el CVV de la tarjeta.');        return false; }
+    if (!tit)                          { mostrarError('Ingresa el nombre del titular.');        return false; }
+  }
+  return true;
+}
+
 function simularPasarela(metodo) {
   return new Promise(resolve => {
     const r = Math.random();
@@ -514,8 +748,21 @@ function simularPasarela(metodo) {
   });
 }
 
-// ── Registrar pedido en el backend ───────────────────
 async function registrarPedido(sesion, direccion, metodo, referencia) {
+  const datosComprador = tipoComprador === 'natural' ? {
+    rutNit:   document.getElementById('rutNitNat').value.trim(),
+    nombre:   document.getElementById('nombreCompletoNat').value.trim(),
+    telefono: document.getElementById('telefonoContactoNat').value.trim()
+  } : {
+    razonSocial:     document.getElementById('empresaRazonSocial').value.trim(),
+    nit:             document.getElementById('empresaNit').value.trim(),
+    nombreComprador: document.getElementById('empresaComprador').value.trim(),
+    telefonoTrabajo: document.getElementById('empresaTelefono').value.trim(),
+    ordenCompra:     document.getElementById('empresaVincularPO').checked
+                       ? document.getElementById('empresaPoNumero').value.trim()
+                       : null
+  };
+
   try {
     const resp = await fetch(API_BASE + '/api/pedidos', {
       method: 'POST',
@@ -525,7 +772,7 @@ async function registrarPedido(sesion, direccion, metodo, referencia) {
       },
       body: JSON.stringify({
         items: items.map(i => ({
-          productoId: i.id,          // ← usa i.id (el carrito guarda 'id', no 'productoId')
+          id: i.id,
           nombre:     i.nombre,
           cantidad:   i.cantidad,
           precio:     i.precio
@@ -533,33 +780,31 @@ async function registrarPedido(sesion, direccion, metodo, referencia) {
         direccionEntrega: direccion,
         metodoPago:       metodo,
         referenciaPago:   referencia,
+        tipoComprador:    tipoComprador,
+        datosComprador:   datosComprador,
         total: items.reduce((s, i) => s + i.precio * i.cantidad, 0)
       })
     });
     const data = await resp.json().catch(() => ({}));
     return resp.ok ? { ok: true, id: data.id } : { ok: false, error: data.error || 'HTTP ' + resp.status };
   } catch (err) {
-    // Sin backend disponible: pagarmodo demo)
-    return { ok: false, local: true, id: 'LOCAL-' + Date.now() };
+    console.error('[checkout] No se pudo registrar el pedido:', err);
+    return { ok: false, error: 'No fue posible conectar con el servidor para registrar el pedido.' };
   }
 }
 
-// ── Botón PAGAR ───────────────────────────────────────
-document.getElementById('btn-pagar').addEventListener('click', async () => {
+async function procesarPago() {
   ocultarError();
   if (!items.length) return;
 
-  const direccion = document.getElementById('direccionEntrega').value.trim();
-  if (!direccion) {
-    mostrarError('La dirección de entrega es obligatoria.');
-    document.getElementById('direccionEntrega').focus();
-    return;
-  }
+  const direccion = obtenerDireccion();
+  if (!direccion) return;
+  if (!validarDatosComprador()) return;
 
-  const metodo = document.querySelector('input[name="metodoPago"]:checked')?.value || 'PSE';
-  if (!validarMetodo(metodo)) return;
+  const metodo = tipoComprador === 'natural' ? metodoNatural : metodoEmpresa;
+  const metodoValido = tipoComprador === 'natural' ? validarMetodoNatural() : validarMetodoEmpresa();
+  if (!metodoValido) return;
 
-  // Renovar token si es necesario
   const sesionValida = await authAsegurarTokenValido();
   if (!sesionValida) {
     window.location.href = 'login.html?redirect=checkout.html';
@@ -567,34 +812,39 @@ document.getElementById('btn-pagar').addEventListener('click', async () => {
   }
   const sesion = authLeer();
 
-  const btn = document.getElementById('btn-pagar');
-  btn.disabled = true;
+  const btnNat = document.getElementById('btn-pagar-natural');
+  const btnEmp = document.getElementById('btn-pagar-empresa');
+  btnNat.disabled = true;
+  btnEmp.disabled = true;
 
   try {
-    // Paso 1: conectando con pasarela
     mostrarOverlay('Conectando con ' + metodo + '...', 'Verificando disponibilidad de productos');
     await new Promise(r => setTimeout(r, 700));
 
-    // Paso 2: procesando pago (simulado)
     mostrarOverlay('Procesando pago con ' + metodo + '...', 'No cierres ni recargues esta ventana');
     const resultado = await simularPasarela(metodo);
 
     ocultarOverlay();
 
-    const resultadoEl   = document.getElementById('resultado-pago');
-    const contenidoEl   = document.getElementById('checkout-contenido');
+    const resultadoEl = document.getElementById('resultado-pago');
+    const contenidoEl = document.getElementById('checkout-contenido');
 
-    // ── APROBADO ──────────────────────────────────────
     if (resultado.estado === 'aprobado') {
       mostrarOverlay('Registrando tu pedido...', 'Ya casi terminamos');
       const pedido = await registrarPedido(sesion, direccion, metodo, resultado.ref);
       ocultarOverlay();
+      if (!pedido.ok) {
+        mostrarNotificacion(pedido.error || 'No se pudo registrar el pedido. Conservamos tu carrito para reintentar.', 'error');
+        btnNat.disabled = false;
+        btnEmp.disabled = false;
+        return;
+      }
 
       carritoVaciar();
       items = [];
 
-      contenidoEl.style.display   = 'none';
-      resultadoEl.style.display   = 'block';
+      contenidoEl.style.display = 'none';
+      resultadoEl.style.display = 'block';
       resultadoEl.innerHTML = `
         <div class="resultado-aprobado text-center">
           <div style="font-size:3.5rem;">✅</div>
@@ -612,7 +862,6 @@ document.getElementById('btn-pagar').addEventListener('click', async () => {
           <p class="small text-muted mt-3 mb-0">Redirigiendo a tu historial en <span id="cuenta-regresiva">5</span> s...</p>
         </div>`;
 
-      // Cuenta regresiva y redirección automática
       let seg = 5;
       const intervalo = setInterval(() => {
         seg--;
@@ -622,7 +871,6 @@ document.getElementById('btn-pagar').addEventListener('click', async () => {
       }, 1000);
     }
 
-    // ── RECHAZADO ─────────────────────────────────────
     else if (resultado.estado === 'rechazado') {
       resultadoEl.style.display = 'block';
       resultadoEl.innerHTML = `
@@ -631,14 +879,20 @@ document.getElementById('btn-pagar').addEventListener('click', async () => {
           <span class="small">Tu entidad financiera rechazó la transacción.
           Verifica los datos o intenta con otro método de pago.</span>
         </div>`;
-      btn.disabled = false;
+      btnNat.disabled = false;
+      btnEmp.disabled = false;
     }
 
-    // ── PENDIENTE ─────────────────────────────────────
     else {
       mostrarOverlay('Registrando tu pedido...', 'Ya casi terminamos');
       const pedido = await registrarPedido(sesion, direccion, metodo, resultado.ref);
       ocultarOverlay();
+      if (!pedido.ok) {
+        mostrarNotificacion(pedido.error || 'No se pudo registrar el pedido. Conservamos tu carrito para reintentar.', 'error');
+        btnNat.disabled = false;
+        btnEmp.disabled = false;
+        return;
+      }
 
       carritoVaciar();
       items = [];
@@ -660,9 +914,13 @@ document.getElementById('btn-pagar').addEventListener('click', async () => {
   } catch (err) {
     ocultarOverlay();
     mostrarError('Error inesperado: ' + err.message + '. Intenta de nuevo.');
-    btn.disabled = false;
+    btnNat.disabled = false;
+    btnEmp.disabled = false;
   }
-});
+}
+
+document.getElementById('btn-pagar-natural').addEventListener('click', procesarPago);
+document.getElementById('btn-pagar-empresa').addEventListener('click', procesarPago);
 </script>
 </body>
 </html>

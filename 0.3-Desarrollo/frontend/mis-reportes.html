@@ -158,8 +158,9 @@ async function cargarReportes() {
     }
     estado.textContent = reportes.length + ' reporte(s) cargado(s).';
   } catch (err) {
-    estado.textContent = 'Error al consultar tus reportes (' + err.message + ').';
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Error de conexión.</td></tr>';
+    estado.textContent = '';
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Sin datos disponibles temporalmente.</td></tr>';
+    mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }
 }
 
@@ -240,7 +241,7 @@ async function guardarReporte() {
 async function eliminarReporte(id) {
   const sesion = exigirSesion();
   if (!sesion) return;
-  if (!confirm('¿Eliminar este reporte?')) return;
+  if (!await confirmarAccion('¿Eliminar este reporte?')) return;
 
   try {
     const resp = await fetch(API_BASE + '/api/mis-reportes/' + id, {
@@ -253,7 +254,8 @@ async function eliminarReporte(id) {
     }
     await cargarReportes();
   } catch (err) {
-    document.getElementById('estado').textContent = 'No se pudo eliminar (' + err.message + ').';
+    document.getElementById('estado').textContent = '';
+    mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }
 }
 

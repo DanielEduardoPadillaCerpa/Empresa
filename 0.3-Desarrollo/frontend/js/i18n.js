@@ -333,6 +333,7 @@ function registrarTextoAutomatico(elemento) {
 function etiquetarTextosSinClave(raiz = document) {
   raiz.querySelectorAll('title, h1, h2, h3, h4, h5, h6, p, label, th, td, button, a, span, option, div').forEach(elemento => {
     if (elemento.closest('script, style, template, [aria-hidden="true"]')) return;
+    if (elemento.hasAttribute('data-i18n-ignore')) return;
     if (elemento.children.length > 0) return;
     registrarTextoAutomatico(elemento);
   });
@@ -355,6 +356,7 @@ function aplicarIdioma(lang) {
   etiquetarTextosSinClave();
 
   document.querySelectorAll('[data-i18n]').forEach(el => {
+    if (el.hasAttribute('data-i18n-ignore')) return;
     const clave = el.getAttribute('data-i18n');
     if (T[clave] && T[clave][lang] !== undefined) {
       el.textContent = T[clave][lang];

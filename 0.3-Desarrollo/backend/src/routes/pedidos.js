@@ -42,9 +42,10 @@ router.post('/', requiereAutenticacion, async (req, res) => {
     const clienteAutorizado = !!clienteFilas[0].autorizacion_general;
 
     let hayRestringido = false;
+    const itemsCanonicos = [];
     for (const item of items) {
       const [producto] = await pool.query(
-        'SELECT cantidad_disponible, restringido, estado FROM productos WHERE id=?',
+        'SELECT id, nombre, precio, cantidad_disponible, restringido, estado FROM productos WHERE id=?',
         [item.id]
       );
       if (!producto.length || producto[0].estado !== 'activo') {
@@ -54,6 +55,12 @@ router.post('/', requiereAutenticacion, async (req, res) => {
         return res.status(400).json({ error: `No hay suficiente inventario para ${item.nombre}` });
       }
       if (producto[0].restringido) hayRestringido = true;
+      itemsCanonicos.push({
+        id: producto[0].id,
+        nombre: producto[0].nombre,
+        cantidad: Number(item.cantidad),
+        precio: Number(producto[0].precio)
+      });
     }
 
     // Equipo restringido: exige que el cliente tenga la autorización general
@@ -65,16 +72,16 @@ router.post('/', requiereAutenticacion, async (req, res) => {
     }
 
     // Calcular total
-    const total = items.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
+    const total = itemsCanonicos.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
 
     // Registrar pedido
     const [resultado] = await pool.query(
       'INSERT INTO pedidos (cliente_id, items, total, estado) VALUES (?, ?, ?, ?)',
-      [clienteId, JSON.stringify(items), total, 'pendiente']
+      [clienteId, JSON.stringify(itemsCanonicos), total, 'pendiente']
     );
 
     // Registrar el detalle (línea por producto) y descontar inventario
-    for (const item of items) {
+    for (const item of itemsCanonicos) {
       await pool.query(
         'INSERT INTO detalle_pedido (pedido_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)',
         [resultado.insertId, item.id, item.cantidad, item.precio]

@@ -58,6 +58,11 @@
     <p class="text-center small text-muted mt-3">
       <span data-i18n="login_no_account">¿No tienes cuenta?</span> <a href="registro.html" data-i18n="login_register_link">Regístrate aquí</a>
     </p>
+    <p class="text-center small">
+    <label class="text-muted d-none" data-i18n="login_backend_url">URL del backend:</label>
+    <input type="hidden" id="apiBase" value="http://localhost:8081">
+    </p>
+
   </div>
 </main>
 
@@ -125,3 +130,4 @@ form.addEventListener('submit', async function (e) {
 </script>
 </body>
 </html>
+<!-- no esta mostrando el selecione soy humano. etc -->

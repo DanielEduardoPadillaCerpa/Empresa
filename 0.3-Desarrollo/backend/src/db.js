@@ -173,22 +173,24 @@ async function migrar() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
 
-    // Productos
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS productos (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        nombre VARCHAR(255) NOT NULL,
-        descripcion TEXT,
-        precio DECIMAL(10,2) NOT NULL,
-        imagen VARCHAR(255),
-        cantidad_disponible INT DEFAULT 0,
-        estado ENUM('activo','inactivo') DEFAULT 'activo',
-        fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-        restringido BOOLEAN DEFAULT FALSE,
-        categoria_id INT,
-        FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE SET NULL
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    `);
+  // Productos
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS productos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      nombre VARCHAR(255) NOT NULL,
+      descripcion TEXT,
+      precio DECIMAL(10,2) NOT NULL,
+      imagen VARCHAR(255),
+      cantidad_disponible INT DEFAULT 0,
+      estado ENUM('activo','inactivo') DEFAULT 'activo',
+      fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+      restringido BOOLEAN DEFAULT FALSE,
+      categoria_id INT,
+      macrocategoria ENUM('general','vestimenta','herramientas') DEFAULT 'general',
+      metadatos JSON NULL,
+      FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
 
   // Atenciones
   await pool.query(`
@@ -299,6 +301,18 @@ async function migrarColumnasFaltantes() {
     );
   } catch (err) {
     console.warn('[db] No se pudo ajustar el ENUM de pedidos.estado (puede que ya esté actualizado):', err.message);
+  }
+
+  try {
+    await pool.query("ALTER TABLE productos ADD COLUMN macrocategoria ENUM('general','vestimenta','herramientas') DEFAULT 'general'");
+  } catch (err) {
+    console.warn('[db] No se pudo agregar macrocategoria a productos:', err.message);
+  }
+
+  try {
+    await pool.query("ALTER TABLE productos ADD COLUMN metadatos JSON NULL");
+  } catch (err) {
+    console.warn('[db] No se pudo agregar metadatos a productos:', err.message);
   }
 }
 

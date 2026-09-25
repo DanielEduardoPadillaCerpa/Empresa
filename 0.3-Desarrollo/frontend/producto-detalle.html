@@ -8,17 +8,82 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="css/style.css">
 <style>
+  .btn-volver {
+    border: 1px solid rgba(11,35,64,.18); border-radius: 8px;
+    background: #fff; color: var(--navy-900, #0b2340); font-size: .85rem;
+    padding: .5rem 1rem; display: inline-flex; align-items: center; gap: .4rem;
+    text-decoration: none; margin-bottom: 1.5rem;
+  }
+  .btn-volver:hover { border-color: var(--brass-600, #b08d57); color: var(--navy-900, #0b2340); }
+
   .detalle-img {
-    width: 100%;
-    border-radius: 10px;
-    overflow: hidden;
-    background: #f1efe9;
-    border: 1px solid rgba(11,35,64,0.12);
+    width: 100%; border-radius: 10px; overflow: hidden;
+    background: #f1efe9; border: 1px solid rgba(11,35,64,0.12); position: sticky; top: 1.5rem;
   }
   .detalle-img img { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 320px; }
-  .detalle-precio { font-family: 'IBM Plex Mono', monospace; font-size: 1.9rem; color: var(--navy-900, #0b2340); }
-  .detalle-meta dt { color: #6c757d; font-size: .8rem; }
-  .detalle-meta dd { margin-bottom: .6rem; }
+
+  .detalle-precio { font-family: 'IBM Plex Mono', monospace; font-size: 2.1rem; font-weight: 700; color: var(--navy-900, #0b2340); }
+
+  .caja-info {
+    display: flex; gap: .75rem; border: 1px solid rgba(11,35,64,.12);
+    border-radius: 10px; padding: 1rem; background: #fff; margin-bottom: .75rem;
+  }
+  .caja-info-icono { font-size: 1.3rem; line-height: 1; }
+  .caja-info-titulo { font-weight: 700; font-size: .88rem; color: var(--navy-900, #0b2340); }
+  .caja-info-sub { font-size: .82rem; color: #6c757d; }
+
+  .buy-box {
+    border: 1px solid rgba(11,35,64,.15); border-radius: 12px;
+    padding: 1.4rem; background: var(--paper-50, #fafaf7); position: sticky; top: 1.5rem;
+  }
+  .buy-box-titulo {
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .06em;
+    color: #6c757d; font-weight: 700; margin-bottom: .8rem;
+  }
+
+  .tallas-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin-bottom: 1.4rem; }
+  .talla-btn {
+    border: 1.5px solid rgba(11,35,64,.2); border-radius: 8px; background: #fff;
+    padding: .55rem 0; font-weight: 600; font-size: .92rem; cursor: pointer;
+    color: var(--navy-900, #0b2340); text-align: center; transition: border-color .15s, background .15s;
+  }
+  .talla-btn:hover { border-color: var(--brass-600, #b08d57); }
+  .talla-btn.seleccionada { border-color: var(--navy-900, #0b2340); background: rgba(11,35,64,.06); }
+  .talla-btn.agotada { color: #adb5bd; border-color: rgba(11,35,64,.08); background: #f4f4f2; cursor: not-allowed; }
+  .talla-agotada-label { font-size: .62rem; color: #adb5bd; text-align: center; margin-top: -.35rem; }
+
+  .stepper { display: inline-flex; align-items: center; border: 1px solid rgba(11,35,64,.2); border-radius: 8px; overflow: hidden; }
+  .stepper button { border: none; background: #fff; width: 2.2rem; height: 2.5rem; font-size: 1.05rem; cursor: pointer; }
+  .stepper button:hover { background: var(--paper-50, #fafaf7); }
+  .stepper input {
+    border: none; width: 3rem; text-align: center; font-weight: 600;
+    -moz-appearance: textfield; height: 2.5rem;
+  }
+  .stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .btn-agregar-carrito {
+    background: #4fbfa8; border: none; color: #fff; font-weight: 700;
+  }
+  .btn-agregar-carrito:hover { background: #3fa593; color: #fff; }
+  .btn-agregar-carrito:disabled { background: #adb5bd; }
+
+  .confirmacion-agregado {
+    color: #1b7a4d; font-size: .85rem; font-weight: 600;
+    display: none; align-items: center; gap: .35rem; margin-top: .6rem;
+  }
+
+  .btn-cotizacion {
+    width: 100%; border: 1px solid rgba(11,35,64,.2); background: #fff;
+    color: var(--navy-900, #0b2340); font-size: .85rem; font-weight: 600;
+    border-radius: 8px; padding: .7rem; margin-top: 1rem; text-decoration: none; display: block; text-align: center;
+  }
+  .btn-cotizacion:hover { border-color: var(--brass-600, #b08d57); color: var(--navy-900, #0b2340); }
+
+  .ficha-lista { list-style: none; padding: 0; margin: 1.2rem 0 0; }
+  .ficha-lista li { display: flex; gap: .6rem; padding: .55rem 0; border-top: 1px solid rgba(11,35,64,.08); font-size: .85rem; }
+  .ficha-lista li:first-child { border-top: none; }
+  .ficha-icono { flex: 0 0 auto; }
+  .ficha-nota { font-size: .72rem; color: #98a1ab; margin-top: .4rem; }
 </style>
 </head>
 <body>
@@ -37,7 +102,7 @@
         <li class="nav-item"><a class="nav-link" href="landing.html" data-i18n="nav_inicio">Inicio</a></li>
         <li class="nav-item"><a class="nav-link active" href="index.html" data-i18n="nav_catalogo">Catálogo</a></li>
         <li class="nav-item" id="navHistorial"><a class="nav-link" href="historial.html" data-i18n="orders_history_nav">Historial</a></li>
-<li class="nav-item" id="navMisReportes"><a class="nav-link" href="mis-reportes.html" data-i18n="nav_mis_reportes">Mis reportes</a></li>
+        <li class="nav-item" id="navMisReportes"><a class="nav-link" href="mis-reportes.html" data-i18n="nav_mis_reportes">Mis reportes</a></li>
         <li class="nav-item">
           <button class="btn btn-sm position-relative" style="border:1px solid var(--brass-600); color:var(--brass-500); background:transparent;" data-bs-toggle="offcanvas" data-bs-target="#carritoOffcanvas">
             🛒 <span data-i18n="nav_carrito">Carrito</span>
@@ -52,24 +117,24 @@
 </nav>
 
 <main class="container py-5">
-  <nav aria-label="breadcrumb" class="mb-4">
-    <ol class="breadcrumb small">
-      <li class="breadcrumb-item"><a href="index.html" data-i18n="products_heading">Productos disponibles</a></li>
-      <li class="breadcrumb-item active" id="breadcrumb-nombre" aria-current="page">…</li>
-    </ol>
-  </nav>
+
+  <a href="index.html" class="btn-volver">← <span data-i18n="detail_back_link">Volver a Productos Disponibles</span></a>
 
   <div id="estado-detalle" class="text-muted small mb-3"></div>
 
-  <div id="detalle-contenido" class="row g-5" style="display:none;">
-    <div class="col-md-5">
+  <div id="detalle-contenido" class="row g-4" style="display:none;">
+
+    <!-- ── Imagen ── -->
+    <div class="col-md-4">
       <div class="detalle-img">
         <img id="detalle-imagen" src="" alt="">
       </div>
     </div>
-    <div class="col-md-7">
+
+    <!-- ── Información principal ── -->
+    <div class="col-md-4">
       <div class="d-flex justify-content-between align-items-start mb-2">
-        <span class="categoria-tag" id="detalle-categoria"></span>
+        <span class="eyebrow" id="detalle-categoria"></span>
         <span class="badge-restringido badge rounded-pill" id="detalle-restringido" style="display:none;" data-i18n="detail_restricted_badge">Equipo restringido</span>
       </div>
       <h1 class="display-serif h3 mb-3" id="detalle-nombre"></h1>
@@ -77,26 +142,71 @@
 
       <div class="detalle-precio my-3" id="detalle-precio"></div>
 
-      <dl class="row detalle-meta">
-        <div class="col-6">
-          <dt data-i18n="detail_availability">Disponibilidad</dt>
-          <dd id="detalle-disponibilidad"></dd>
-        </div>
-        <div class="col-6">
-          <dt data-i18n="detail_shipping">Despacho</dt>
-          <dd data-i18n="products_shipping_note">A la instalación registrada en 3–5 días hábiles</dd>
-        </div>
-      </dl>
-
       <div id="detalle-aviso-restringido" class="aviso-sensible mb-3" style="display:none;">
         <span data-i18n="detail_restricted_notice">Este producto requiere validación especial: tu cuenta debe tener registrada la autorización/verificación de antecedentes para poder comprarlo.</span>
         <a href="registro.html" data-i18n="cart_restricted_notice_link">formulario de registro</a>.
       </div>
 
-      <div class="d-flex align-items-center gap-3 mt-4">
-        <label for="detalle-cantidad" class="small mb-0" data-i18n="detail_quantity">Cantidad:</label>
-        <input type="number" id="detalle-cantidad" class="form-control" style="max-width:100px;" value="1" min="1">
-        <button id="detalle-btn-agregar" class="btn btn-dark px-4" data-i18n="detail_add_to_cart">Agregar al carrito</button>
+      <div class="caja-info">
+        <div class="caja-info-icono">📦</div>
+        <div>
+          <div class="caja-info-titulo" data-i18n="detail_availability">Disponibilidad</div>
+          <div class="caja-info-sub" id="detalle-disponibilidad"></div>
+        </div>
+      </div>
+      <div class="caja-info">
+        <div class="caja-info-icono">🚚</div>
+        <div>
+          <div class="caja-info-titulo" data-i18n="detail_shipping">Despacho</div>
+          <div class="caja-info-sub" data-i18n="products_shipping_note">A la instalación registrada en 3–5 días hábiles</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Buy box ── -->
+    <div class="col-md-4">
+      <div class="buy-box">
+
+        <!-- Selector de tallas: solo aparece si el producto trae el campo `tallas` -->
+        <div id="detalle-tallas-wrap" style="display:none;">
+          <div class="buy-box-titulo">Selector de tallas</div>
+          <div id="detalle-tallas-grid" class="tallas-grid"></div>
+        </div>
+
+        <div class="buy-box-titulo">Acciones de compra</div>
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <div class="stepper">
+            <button type="button" id="detalle-cantidad-menos">−</button>
+            <input type="number" id="detalle-cantidad" value="1" min="1">
+            <button type="button" id="detalle-cantidad-mas">+</button>
+          </div>
+          <button id="detalle-btn-agregar" class="btn btn-agregar-carrito flex-grow-1 py-2" data-i18n="detail_add_to_cart">Agregar al carrito</button>
+        </div>
+        <div id="detalle-confirmacion" class="confirmacion-agregado">✅ Agregado al carrito</div>
+
+        <a id="detalle-cotizacion-b2b" href="#" class="btn-cotizacion">Solicitar cotización B2B (más de 12 unidades)</a>
+
+        <div class="buy-box-titulo mt-4">Ficha técnica y garantía</div>
+        <ul class="ficha-lista">
+          <li>
+            <span class="ficha-icono">📄</span>
+            <div class="flex-grow-1">
+              <button class="btn btn-link p-0 small fw-semibold text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#detalle-ficha-tecnica">
+                Ficha técnica (ver detalle) ▾
+              </button>
+              <div class="collapse small text-muted mt-1" id="detalle-ficha-tecnica"></div>
+            </div>
+          </li>
+          <li>
+            <span class="ficha-icono">🛡️</span>
+            <div><strong>Garantía:</strong> 6 meses de fábrica</div>
+          </li>
+          <li>
+            <span class="ficha-icono">🔁</span>
+            <div><strong>Cambios:</strong> primer cambio de talla sin costo</div>
+          </li>
+        </ul>
+        <div class="ficha-nota">La garantía y política de cambios corresponden a las condiciones generales de la tienda.</div>
       </div>
     </div>
   </div>
@@ -109,28 +219,53 @@
   </div>
 </footer>
 
-<!-- Carrito lateral (idéntico al del catálogo, para poder agregar sin salir de la ficha) -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="carritoOffcanvas">
-  <div class="offcanvas-header" style="background:var(--navy-900); color:var(--paper-50);">
+<!-- Carrito lateral -->
+<!-- Carrito lateral -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="carritoOffcanvas" style="width: min(1180px, 96vw);">
+  <div class="offcanvas-header" style="background:var(--navy-900); color:var(--paper-50); border-bottom:1px solid rgba(255,255,255,.12);">
     <h5 class="offcanvas-title display-serif h6 mb-0" data-i18n="cart_title">Tu carrito</h5>
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
   </div>
-  <div class="offcanvas-body p-0 d-flex flex-column">
-    <div id="carrito-aviso-restringido" class="aviso-sensible m-3" style="display:none;">
-      <span data-i18n="cart_restricted_notice_pre">
-        Tu carrito incluye equipo táctico restringido. Para completar este pedido necesitarás
-        registrar el número de consulta de antecedentes judiciales en el
-      </span>
-      <a href="registro.html" data-i18n="cart_restricted_notice_link">formulario de registro</a>.
-    </div>
-    <div id="carrito-items" class="flex-grow-1 overflow-auto"></div>
-    <div class="p-3 border-top">
-      <div class="d-flex justify-content-between mb-3">
-        <span class="fw-semibold" data-i18n="cart_total_label">Total</span>
-        <span id="carrito-total" class="precio">$0</span>
+
+  <div class="offcanvas-body carrito-layout p-0">
+    <div class="carrito-list-panel">
+      <div id="carrito-aviso-restringido" class="aviso-sensible m-3" style="display:none;">
+        <span data-i18n="cart_restricted_notice_pre">
+          Tu carrito incluye equipo táctico restringido. Para completar este pedido necesitarás
+          registrar el número de consulta de antecedentes judiciales en el
+        </span>
+        <a href="registro.html" data-i18n="cart_restricted_notice_link">formulario de registro</a>.
       </div>
-      <button class="btn btn-dark w-100" onclick="confirmarCompra()" data-i18n="cart_confirm_btn">Confirmar pedido</button>
+
+      <div id="carrito-items" class="carrito-items-container p-3"></div>
     </div>
+
+    <aside class="carrito-summary-panel">
+      <h3>Resumen del Pedido</h3>
+
+      <div class="carrito-summary-row">
+        <span>Subtotal (<span id="carrito-cantidad-items" data-i18n-ignore="true">0</span> artículos):</span>
+        <span id="carrito-subtotal" class="fw-semibold" data-i18n-ignore="true">$0 COP</span>
+      </div>
+
+      <div class="carrito-summary-row total-row">
+        <span class="fw-bold">Total a pagar:</span>
+        <span id="carrito-total" class="fw-bold text-dark" data-i18n-ignore="true">$0 COP</span>
+      </div>
+
+      <div class="carrito-cupon-row">
+        <input type="text" id="cuponDescuento" class="form-control" placeholder="Código de Descuento">
+        <button type="button" class="btn btn-outline-dark" onclick="aplicarCupon()">Aplicar</button>
+      </div>
+
+      <button type="button" class="btn btn-success carrito-checkout-btn" onclick="confirmarCompra()">
+        Proceder al pago seguro
+      </button>
+
+      <div class="carrito-continuar-wrap">
+        <a href="#" data-bs-dismiss="offcanvas">← Continuar Comprando</a>
+      </div>
+    </aside>
   </div>
 </div>
 
@@ -154,6 +289,7 @@ function formatearPrecio(valor) {
 }
 
 let productoActual = null;
+let tallaSeleccionada = null;
 
 async function cargarDetalle() {
   const params = new URLSearchParams(window.location.search);
@@ -161,10 +297,13 @@ async function cargarDetalle() {
   const estadoEl = document.getElementById('estado-detalle');
 
   if (!id) {
+    estadoEl.style.display = 'block';
     estadoEl.textContent = 'No se indicó qué producto mostrar.';
     return;
   }
 
+  // Mostrar mientras carga
+  estadoEl.style.display = 'block';
   estadoEl.textContent = 'Cargando producto...';
 
   try {
@@ -181,13 +320,17 @@ async function cargarDetalle() {
     productoActual = p;
 
     document.title = p.nombre + ' — Suministros Institucionales';
-    document.getElementById('breadcrumb-nombre').textContent = p.nombre;
     document.getElementById('detalle-imagen').src = imgProducto(p);
     document.getElementById('detalle-imagen').alt = p.nombre;
-    document.getElementById('detalle-categoria').textContent = categoriaNombre;
+    document.getElementById('detalle-categoria').textContent = categoriaNombre ? ('Línea de ' + categoriaNombre) : 'Catálogo institucional';
     document.getElementById('detalle-nombre').textContent = p.nombre;
     document.getElementById('detalle-descripcion').textContent = p.descripcion || '';
     document.getElementById('detalle-precio').textContent = formatearPrecio(p.precio);
+    document.getElementById('detalle-ficha-tecnica').textContent = p.descripcion || 'Sin información técnica adicional para este producto.';
+
+    // Cotización B2B
+    document.getElementById('detalle-cotizacion-b2b').href =
+      'mailto:ventas@suministrosinstitucionales.com?subject=' + encodeURIComponent('Cotización mayorista — ' + p.nombre);
 
     const esRestringido = p.restringido === 1 || p.restringido === true;
     document.getElementById('detalle-restringido').style.display = esRestringido ? 'inline-block' : 'none';
@@ -208,25 +351,74 @@ async function cargarDetalle() {
       cantidadInput.max = p.cantidad_disponible;
     }
 
+    // ── Selector de tallas ──
+    tallaSeleccionada = null;
+    const tallasWrap = document.getElementById('detalle-tallas-wrap');
+    if (Array.isArray(p.tallas) && p.tallas.length) {
+      tallasWrap.style.display = 'block';
+      document.getElementById('detalle-tallas-grid').innerHTML = p.tallas.map(t => `
+        <div>
+          <button type="button" class="talla-btn ${t.disponible ? '' : 'agotada'}"
+                  data-talla="${escapeHtml(t.talla)}" ${t.disponible ? '' : 'disabled'}>
+            ${escapeHtml(t.talla)}
+          </button>
+          ${t.disponible ? '' : '<div class="talla-agotada-label">Agotado</div>'}
+        </div>`).join('');
+
+      document.querySelectorAll('#detalle-tallas-grid .talla-btn:not(.agotada)').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#detalle-tallas-grid .talla-btn').forEach(b => b.classList.remove('seleccionada'));
+          btn.classList.add('seleccionada');
+          tallaSeleccionada = btn.dataset.talla;
+        });
+      });
+    } else {
+      tallasWrap.style.display = 'none';
+    }
+
     document.getElementById('detalle-contenido').style.display = 'flex';
+
+    // Ocultar mensaje al terminar
+    estadoEl.style.display = 'none';
     estadoEl.textContent = '';
 
     if (typeof aplicarIdioma === 'function') aplicarIdioma(idiomaGuardado());
   } catch (err) {
+    estadoEl.style.display = 'block';
     estadoEl.textContent = 'No se pudo cargar el producto (' + err.message + ').';
   }
 }
 
+
+// ── Stepper de cantidad ────────────────────────────────
+document.getElementById('detalle-cantidad-menos').addEventListener('click', () => {
+  const input = document.getElementById('detalle-cantidad');
+  input.value = Math.max(1, (parseInt(input.value, 10) || 1) - 1);
+});
+document.getElementById('detalle-cantidad-mas').addEventListener('click', () => {
+  const input = document.getElementById('detalle-cantidad');
+  const max = productoActual ? Number(productoActual.cantidad_disponible) : Infinity;
+  input.value = Math.min(max || Infinity, (parseInt(input.value, 10) || 1) + 1);
+});
+
 document.getElementById('detalle-btn-agregar')?.addEventListener('click', () => {
   if (!productoActual) return;
+
+  // Si el producto tiene tallas, exige seleccionar una antes de agregar
+  if (Array.isArray(productoActual.tallas) && productoActual.tallas.length && !tallaSeleccionada) {
+    mostrarNotificacion('Selecciona una talla antes de agregar al carrito.', 'info');
+    return;
+  }
+
   const cantidadDeseada = Math.max(1, parseInt(document.getElementById('detalle-cantidad').value, 10) || 1);
 
   const items = carritoLeer();
-  const existente = items.find(i => i.id === String(productoActual.id));
+  const idItem = String(productoActual.id) + (tallaSeleccionada ? '-' + tallaSeleccionada : '');
+  const existente = items.find(i => i.id === idItem);
   const totalEnCarrito = (existente?.cantidad || 0) + cantidadDeseada;
 
   if (totalEnCarrito > productoActual.cantidad_disponible) {
-    alert('No hay suficiente inventario disponible para esa cantidad.');
+    mostrarNotificacion('No hay suficiente inventario disponible para esa cantidad.', 'error');
     return;
   }
 
@@ -234,8 +426,8 @@ document.getElementById('detalle-btn-agregar')?.addEventListener('click', () => 
     existente.cantidad = totalEnCarrito;
   } else {
     items.push({
-      id: String(productoActual.id),
-      nombre: productoActual.nombre,
+      id: idItem,
+      nombre: productoActual.nombre + (tallaSeleccionada ? ' (Talla ' + tallaSeleccionada + ')' : ''),
       precio: Number(productoActual.precio),
       restringido: productoActual.restringido === 1 || productoActual.restringido === true,
       cantidad: cantidadDeseada
@@ -243,10 +435,9 @@ document.getElementById('detalle-btn-agregar')?.addEventListener('click', () => 
   }
   carritoGuardar(items);
 
-  const btn = document.getElementById('detalle-btn-agregar');
-  const textoOriginal = btn.textContent;
-  btn.textContent = 'Agregado ✓';
-  setTimeout(() => { btn.textContent = textoOriginal; }, 900);
+  const confirmacion = document.getElementById('detalle-confirmacion');
+  confirmacion.style.display = 'flex';
+  setTimeout(() => { confirmacion.style.display = 'none'; }, 2000);
 });
 
 document.addEventListener('DOMContentLoaded', cargarDetalle);

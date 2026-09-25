@@ -70,13 +70,25 @@
   </div>
 </nav>
 
-<header class="hero py-5">
-  <div class="container py-3">
-    <div class="eyebrow mb-2" data-i18n="admin_dashboard_header">Panel administrativo · Acceso restringido</div>
-    <h1 class="display-serif h2 mb-2" data-i18n="admin_dashboard_title">Dashboard general</h1>
-    <p class="lead col-lg-8 mb-0" data-i18n="admin_dashboard_lead">Resumen operativo de clientes, catálogo, inventario y pedidos.</p>
+<header class="hero py-5 text-center" 
+        style="background: linear-gradient(to bottom, rgb(52, 27, 139) 0%, rgb(0, 0, 0) 100%);
+               color: var(--paper-50);">
+  <div class="container d-flex flex-column align-items-center text-center">
+    <div class="eyebrow mb-2" data-i18n="admin_dashboard_header">
+      Panel administrativo · Acceso restringido
+    </div>
+    <h1 class="display-serif h2 mb-2" data-i18n="admin_dashboard_title">
+      Dashboard general
+    </h1>
+    <p class="lead col-lg-8 mb-0" data-i18n="admin_dashboard_lead">
+      Resumen operativo de clientes, catálogo, inventario y pedidos.
+    </p>
   </div>
 </header>
+
+
+
+
 
 <main class="container py-5">
 
@@ -299,20 +311,41 @@ async function cargarDashboard() {
     }
 
     // ---- Tabla: últimos pedidos (ya vienen ordenados DESC por fecha desde el backend) ----
-    const tbodyPed = document.getElementById('tbodyUltimosPedidos');
-    const ultimos = pedidos.slice(0, LIMITE_ULTIMOS_PEDIDOS);
-    if (!ultimos.length) {
-      tbodyPed.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No hay pedidos registrados.</td></tr>';
-    } else {
-      tbodyPed.innerHTML = ultimos.map(p => `
-        <tr>
-          <td>${escapeHtml(p.id)}</td>
-          <td>${escapeHtml(p.cliente?.unidad)}</td>
-          <td class="small text-muted">${escapeHtml((p.fechaPedido ?? '').toString().replace('T', ' ').slice(0,16))}</td>
-          <td>${formatearPrecio(p.total)}</td>
-          <td>${escapeHtml(p.estado)}</td>
-        </tr>`).join('');
+    // ---- Tabla: últimos pedidos (ya vienen ordenados DESC por fecha desde el backend) ----
+const tbodyPed = document.getElementById('tbodyUltimosPedidos');
+const ultimos = pedidos.slice(0, LIMITE_ULTIMOS_PEDIDOS);
+
+if (!ultimos.length) {
+  tbodyPed.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No hay pedidos registrados.</td></tr>';
+} else {
+  tbodyPed.innerHTML = ultimos.map(p => {
+    // Definición dinámica de estilos para las etiquetas (badges) según el estado
+    let badgeClass = 'bg-secondary text-white'; // Por defecto
+    const estadoNormalizado = (p.estado ?? '').toLowerCase().trim();
+
+    if (estadoNormalizado === 'pendiente') {
+      badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+    } else if (estadoNormalizado === 'entregado') {
+      badgeClass = 'bg-success-subtle text-success border border-success-subtle';
+    } else if (estadoNormalizado === 'cancelado') {
+      badgeClass = 'bg-danger-subtle text-danger border border-danger-subtle';
     }
+
+    return `
+      <tr class="align-middle">
+        <td class="fw-semibold text-secondary">${escapeHtml(p.id)}</td>
+        <td class="text-dark">${escapeHtml(p.cliente?.unidad)}</td>
+        <td class="text-muted fw-normal">${escapeHtml((p.fechaPedido ?? '').toString().replace('T', ' ').slice(0,16))}</td>
+        <td class="fw-bold text-success-emphasis">${formatearPrecio(p.total)}</td>
+        <td>
+          <span class="badge px-3 py-2 text-uppercase fw-bold ${badgeClass}" style="letter-spacing: 0.5px; font-size: 0.75rem;">
+            ${escapeHtml(p.estado)}
+          </span>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
 
     // ---- Gráfica: pedidos por día ----
     const conteoPorDia = {};

@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
     const incluirInactivos = req.query.incluir_inactivos === '1';
 
     let sql = `
-      SELECT id, nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id, fecha_creacion
+      SELECT id, nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id, macrocategoria, metadatos, fecha_creacion
       FROM productos
     `;
     const condiciones = [];
@@ -65,7 +65,7 @@ router.get('/bajo-inventario', requiereAutenticacion, requiereAdmin, async (req,
 router.get('/:id', async (req, res) => {
   try {
     const [filas] = await pool.query(
-      `SELECT id, nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id, fecha_creacion
+      `SELECT id, nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id, macrocategoria, metadatos, fecha_creacion
        FROM productos WHERE id = ?`,
       [req.params.id]
     );
@@ -80,15 +80,17 @@ router.get('/:id', async (req, res) => {
 // POST /api/productos -> crear producto (solo admin)
 router.post('/', requiereAutenticacion, requiereAdmin, async (req, res) => {
   try {
-    const { nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id } = req.body;
+    const { nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id, macrocategoria, metadatos } = req.body;
 
     if (!nombre || precio === undefined || precio === null) {
       return res.status(400).json({ error: 'Nombre y precio son obligatorios' });
     }
 
+    const metadatosJson = metadatos && typeof metadatos === 'object' ? JSON.stringify(metadatos) : null;
+
     const [resultado] = await pool.query(
-      `INSERT INTO productos (nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO productos (nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id, macrocategoria, metadatos)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         nombre,
         descripcion || null,
@@ -98,6 +100,8 @@ router.post('/', requiereAutenticacion, requiereAdmin, async (req, res) => {
         estado === 'inactivo' ? 'inactivo' : 'activo',
         !!restringido,
         categoria_id || null,
+        ['vestimenta', 'herramientas'].includes(macrocategoria) ? macrocategoria : 'general',
+        metadatosJson,
       ]
     );
 
@@ -119,10 +123,12 @@ router.post('/', requiereAutenticacion, requiereAdmin, async (req, res) => {
 // PUT /api/productos/:id -> editar producto (solo admin)
 router.put('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
   try {
-    const { nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id } = req.body;
+    const { nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id, macrocategoria, metadatos } = req.body;
 
     const [existente] = await pool.query('SELECT id FROM productos WHERE id = ?', [req.params.id]);
     if (!existente.length) return res.status(404).json({ error: 'Producto no encontrado' });
+
+    const metadatosJson = metadatos && typeof metadatos === 'object' ? JSON.stringify(metadatos) : null;
 
     await pool.query(
       `UPDATE productos SET
@@ -133,7 +139,9 @@ router.put('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
          cantidad_disponible = ?,
          estado = ?,
          restringido = ?,
-         categoria_id = ?
+         categoria_id = ?,
+         macrocategoria = ?,
+         metadatos = ?
        WHERE id = ?`,
       [
         nombre,
@@ -144,6 +152,8 @@ router.put('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
         estado === 'inactivo' ? 'inactivo' : 'activo',
         !!restringido,
         categoria_id || null,
+        ['vestimenta', 'herramientas'].includes(macrocategoria) ? macrocategoria : 'general',
+        metadatosJson,
         req.params.id,
       ]
     );

@@ -40,23 +40,7 @@
 
 <main class="container py-5">
   <div id="estado" class="text-muted small mb-3"></div>
-  <div class="table-responsive" style="background:var(--paper-50); border:1px solid rgba(11,35,64,0.12);">
-    <table class="table table-sm mb-0 align-middle">
-      <thead style="background:var(--navy-900); color:var(--paper-100);">
-        <tr>
-          <th data-i18n="orders_id">ID</th>
-          <th data-i18n="orders_date">Fecha</th>
-          <th data-i18n="orders_products">Productos</th>
-          <th data-i18n="orders_total">Total</th>
-          <th data-i18n="orders_status">Estado</th>
-          <th data-i18n="orders_actions">Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="tbodyPedidos">
-        <tr><td colspan="6" class="text-center text-muted py-4" data-i18n="orders_no_data">Sin pedidos todavía.</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <div id="pedidosLista" class="d-grid gap-4"></div>
 </main>
 
 <footer class="institucional py-4">
@@ -78,51 +62,123 @@ async function cargarHistorial() {
   }
 
   const estado = document.getElementById('estado');
-  const tbody = document.getElementById('tbodyPedidos');
+  const contenedor = document.getElementById('pedidosLista');
   estado.textContent = 'Consultando historial...';
 
   try {
-    const resp = await fetch('http://localhost:8081/api/pedidos', {
+    const resp = await fetch(API_BASE + '/api/pedidos', {
       headers: { Authorization: 'Bearer ' + sesion.token }
     });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const pedidos = await resp.json();
 
     if (!pedidos.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4" data-i18n="orders_empty">No hay pedidos registrados.</td></tr>';
+      contenedor.innerHTML = '<div class="card-elevated p-4 text-center text-muted">No hay pedidos registrados.</div>';
     } else {
-      tbody.innerHTML = pedidos.map(p => `
-        <tr>
-          <td class="text-muted">${p.id}</td>
-          <td>${new Date(p.fechaPedido).toLocaleString()}</td>
-          <td>${p.items.map(i => i.nombre + ' × ' + i.cantidad).join(', ')}</td>
-          <td>$${p.total}</td>
-          <td>${p.estado}</td>
-          <td>${p.estado === 'pendiente'
-            ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelarPedido(${p.id})" data-i18n="orders_cancel_btn">Cancelar</button>`
-            : ''}</td>
-        </tr>`).join('');
+      contenedor.innerHTML = pedidos.map(pedido => {
+        const estadoPedido = pedido.estado || 'pendiente';
+        const timeline = ['Confirmado', 'Empacado', 'Despachado', 'Entregado'];
+        const completed = {
+          pendiente: 1,
+          enviado: 3,
+          entregado: 4,
+          cancelado: 0
+        }[estadoPedido] || 1;
+
+        const pasos = timeline.map((etapa, index) => `
+          <div class="d-flex flex-column align-items-center gap-2 ${index < completed ? 'text-success' : 'text-muted'}">
+            <div class="rounded-circle ${index < completed ? 'bg-success' : 'bg-light border'}" style="width: 12px; height: 12px;"></div>
+            <small class="text-center" style="font-size: 0.68rem; line-height: 1.2;">${etapa}</small>
+          </div>
+        `).join('');
+
+        const labelEstado = {
+          pendiente: 'Pendiente',
+          enviado: 'En tránsito',
+          entregado: 'Entregado',
+          cancelado: 'Cancelado'
+        }[estadoPedido] || estadoPedido;
+
+        const badgeClass = {
+          pendiente: 'bg-warning text-dark',
+          enviado: 'bg-info text-dark',
+          entregado: 'bg-success',
+          cancelado: 'bg-danger'
+        }[estadoPedido] || 'bg-secondary';
+
+        const detalleItems = (pedido.items || []).map(item => `
+          <div class="d-flex justify-content-between align-items-center border-top py-2">
+            <div>
+              <div class="fw-semibold">${item.nombre}</div>
+              <small class="text-muted">Cantidad: ${item.cantidad}${item.variacion ? ' · ' + item.variacion : ''}</small>
+            </div>
+            <strong>$${Number(item.precio || item.precio_unitario || 0).toLocaleString('es-CO')}</strong>
+          </div>
+        `).join('');
+
+        return `
+          <article class="card-elevated p-4">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+              <div>
+                <div class="font-monospace small text-uppercase text-muted">Pedido #${pedido.id}</div>
+                <div class="small text-muted">${new Date(pedido.fechaPedido || pedido.fecha).toLocaleString('es-CO')}</div>
+              </div>
+              <span class="badge rounded-pill ${badgeClass}">${labelEstado}</span>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between gap-3 overflow-auto pb-3 mb-3">
+              ${pasos}
+            </div>
+
+            <div class="row g-4">
+              <div class="col-lg-8">
+                <div class="small text-uppercase text-muted mb-2">Artículos adquiridos</div>
+                <div class="bg-light rounded-3 p-3">
+                  ${detalleItems || '<div class="text-muted">Sin detalle disponible.</div>'}
+                </div>
+              </div>
+              <div class="col-lg-4">
+                <div class="small text-uppercase text-muted mb-2">Resumen financiero</div>
+                <div class="bg-light rounded-3 p-3">
+                  <div class="d-flex justify-content-between py-2 border-bottom"><span>Subtotal</span><strong>$${Number(pedido.total || 0).toLocaleString('es-CO')}</strong></div>
+                  <div class="d-flex justify-content-between py-2 border-bottom"><span>IVA</span><strong>$${Math.round(Number(pedido.total || 0) * 0.19).toLocaleString('es-CO')}</strong></div>
+                  <div class="d-flex justify-content-between py-2"><span>Total</span><strong>$${Number(pedido.total || 0).toLocaleString('es-CO')}</strong></div>
+                  <div class="d-flex gap-2 mt-3 flex-wrap">
+                    <button class="btn btn-sm btn-dark" type="button">Descargar soporte</button>
+                    <button class="btn btn-sm btn-outline-dark" type="button">Rastrear guía</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            ${estadoPedido === 'pendiente' ? `
+              <div class="mt-4">
+                <button class="btn btn-sm btn-outline-danger" onclick="cancelarPedido(${pedido.id})">Cancelar pedido</button>
+              </div>
+            ` : ''}
+          </article>
+        `;
+      }).join('');
     }
     estado.textContent = pedidos.length + ' pedido(s) cargado(s).';
   } catch (err) {
-    estado.textContent = 'Error al consultar pedidos (' + err.message + ').';
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4" data-i18n="orders_connection_error">Error de conexión.</td></tr>';
+    estado.textContent = '';
+    contenedor.innerHTML = '<div class="card-elevated p-4 text-center text-muted">Sin pedidos disponibles temporalmente.</div>';
+    mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }
 }
 
-// Cancela un pedido propio (solo posible mientras está "pendiente" — el
-// backend rechaza la petición si ya fue enviado, entregado o cancelado).
 async function cancelarPedido(pedidoId) {
   const sesion = authLeer();
   if (!sesion?.token) {
     window.location.href = 'login.html?redirect=historial.html';
     return;
   }
-  if (!confirm('¿Seguro que deseas cancelar este pedido?')) return;
+  if (!await confirmarAccion('¿Seguro que deseas cancelar este pedido?')) return;
 
   const estado = document.getElementById('estado');
   try {
-    const resp = await fetch('http://localhost:8081/api/pedidos/' + pedidoId + '/cancelar', {
+    const resp = await fetch(API_BASE + '/api/pedidos/' + pedidoId + '/cancelar', {
       method: 'PUT',
       headers: { Authorization: 'Bearer ' + sesion.token }
     });
@@ -130,7 +186,8 @@ async function cancelarPedido(pedidoId) {
     if (!resp.ok) throw new Error(datos.error || 'HTTP ' + resp.status);
     await cargarHistorial();
   } catch (err) {
-    estado.textContent = 'No se pudo cancelar el pedido (' + err.message + ').';
+    estado.textContent = '';
+    mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }
 }
 

@@ -28,8 +28,10 @@
   </div>
 </nav>
 
-<header class="hero py-5">
-  <div class="container py-3">
+<header class="hero py-5 text-center"
+        style="background: linear-gradient(to bottom, rgb(52, 27, 139) 0%, rgb(0, 0, 0) 100%);
+               color: var(--paper-50);">
+  <div class="container  d-flex flex-column align-items-center text-center">
     <div class="eyebrow mb-2" data-i18n="admin_clients_header">Panel administrativo · Acceso restringido</div>
     <h1 class="display-serif h2 mb-2" data-i18n="admin_clients_title">Clientes registrados</h1>
     <p class="lead col-lg-8 mb-0" data-i18n="admin_clients_lead">Datos privados descifrados solo para personal autorizado. No compartas esta pantalla ni la dejes accesible sin control de acceso en producción.</p>
@@ -222,8 +224,9 @@ async function cargarClientes() {
     }
     estado.textContent = clientes.length + ' cliente(s) cargado(s).';
   } catch (err) {
-    estado.textContent = 'No se pudo conectar al backend (' + err.message + '). Verifica que esté corriendo y que la URL sea correcta.';
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4" data-i18n="admin_clients_error_connection">Error de conexión.</td></tr>';
+    estado.textContent = '';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Sin datos disponibles temporalmente.</td></tr>';
+    mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }
 }
 
@@ -256,7 +259,8 @@ async function verCompras(clienteId) {
     }
     new bootstrap.Modal(document.getElementById('modalCompras')).show();
   } catch (err) {
-    modalBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Error al consultar compras (' + err.message + ').</td></tr>';
+    modalBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Sin compras disponibles temporalmente.</td></tr>';
+    mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }
 }
 
@@ -285,7 +289,7 @@ function abrirModalEditarCliente(clienteId) {
   if (!exigirSesion()) return;
   const c = clientesCache.find(x => String(x.id) === String(clienteId));
   if (!c) {
-    alert(textoI18n('admin_clients_not_found', 'No se encontró el cliente en la lista cargada. Vuelve a cargar clientes e inténtalo de nuevo.'));
+    mostrarNotificacion(textoI18n('admin_clients_not_found', 'No se encontró el cliente en la lista cargada. Vuelve a cargar clientes e inténtalo de nuevo.'), 'error');
     return;
   }
   limpiarFormCliente();
@@ -363,7 +367,7 @@ async function eliminarCliente(clienteId) {
 
   const c = clientesCache.find(x => String(x.id) === String(clienteId));
   const nombre = c?.nombreUnidad ?? ('cliente #' + clienteId);
-  if (!confirm(textoI18n('admin_clients_delete_confirm', '¿Eliminar "{nombre}"? Esta acción no se puede deshacer.').replace('{nombre}', nombre))) return;
+  if (!await confirmarAccion(textoI18n('admin_clients_delete_confirm', '¿Eliminar "{nombre}"? Esta acción no se puede deshacer.').replace('{nombre}', nombre))) return;
 
   const estado = document.getElementById('estado');
   try {

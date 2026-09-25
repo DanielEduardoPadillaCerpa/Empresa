@@ -27,8 +27,10 @@
   </div>
 </nav>
 
-<header class="hero py-5">
-  <div class="container py-3">
+<header class="hero py-5 text-center"
+        style="background: linear-gradient(to bottom, rgb(52, 27, 139) 0%, rgb(0, 0, 0) 100%);
+               color: var(--paper-50);">
+  <div class="container  d-flex flex-column align-items-center text-center">
     <div class="eyebrow mb-2" data-i18n="admin_orders_header">Panel administrativo · Acceso restringido</div>
     <h1 class="display-serif h2 mb-2" data-i18n="admin_orders_title">Pedidos registrados</h1>
     <p class="lead col-lg-8 mb-0" data-i18n="admin_orders_lead">Consulta todos los pedidos de clientes y actualiza su estado.</p>
@@ -134,8 +136,9 @@ async function cargarPedidos() {
     }
     estado.textContent = pedidos.length + ' pedido(s) cargado(s).';
   } catch (err) {
-    estado.textContent = 'Error al consultar pedidos (' + err.message + ').';
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4" data-i18n="admin_orders_connection_error">Error de conexión.</td></tr>';
+    estado.textContent = '';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Sin datos disponibles temporalmente.</td></tr>';
+    mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }
 }
 
@@ -158,7 +161,8 @@ async function actualizarEstado(pedidoId, nuevoEstado) {
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     document.getElementById('estado').textContent = 'Pedido ' + pedidoId + ' actualizado a ' + nuevoEstado;
   } catch (err) {
-    document.getElementById('estado').textContent = 'Error al actualizar pedido (' + err.message + ').';
+    document.getElementById('estado').textContent = '';
+    mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }
 }
 

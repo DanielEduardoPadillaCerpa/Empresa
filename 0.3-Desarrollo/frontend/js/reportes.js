@@ -116,7 +116,10 @@ async function cargarReporte() {
     if (estado) estado.textContent = '';
   } catch (err) {
     console.error(err);
-    if (estado) estado.textContent = 'No se pudo cargar el reporte (' + err.message + ').';
+    if (estado) estado.textContent = '';
+    const tbody = document.getElementById('tbodyMasVendidos');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-3">Sin datos disponibles temporalmente.</td></tr>';
+    mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }
 }
 

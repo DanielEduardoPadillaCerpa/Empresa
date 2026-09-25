@@ -56,7 +56,8 @@
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-institucional py-3">
+<nav class="navbar navbar-expand-lg navbar-institucional py-3"
+     style="background: linear-gradient(to top, #657fa1 0%, #000000 90%, #000000 100%); color:#fff;">
   <div class="container">
     <a class="navbar-brand" href="index.html" data-i18n="nav_brand">
       Suministros Institucionales
@@ -83,18 +84,30 @@
         </li>
         <li class="nav-item dropdown selector-idioma"></li>
         <li class="nav-item d-flex align-items-center" id="auth-nav-slot"></li>
+
+
+
       </ul>
     </div>
   </div>
 </nav>
 
-<header class="hero py-3">
-  <div class="container py-2">
-    <div class="eyebrow mb-1" data-i18n="hero_index_eyebrow">Catálogo institucional 2026</div>
-    <h1 class="display-serif mb-2" data-i18n="hero_index_title">Dotación y suministro para unidades policiales</h1>
-    <p class="lead col-lg-7 mb-0" data-i18n="hero_index_lead">Uniformes, equipo táctico, papelería institucional y elementos de oficina, con despacho directo a la instalación registrada. Pedidos, seguimiento y soporte disponibles las 24 horas.</p>
+
+<header class="hero py-2 text-center">
+  <div class="container py-1 text-center">
+    <div class="eyebrow mb-1 text-center" data-i18n="hero_index_eyebrow">
+      Catálogo institucional 2026
+    </div>
+    <h2 class="display-serif mb-1 text-center" data-i18n="hero_index_title">
+      Dotación y suministro para unidades policiales
+    </h2>
+    <p class="lead col-lg-7 mb-0 mx-auto text-center" data-i18n="hero_index_lead">
+      Uniformes, equipo táctico, papelería institucional y elementos de oficina, 
+      con despacho directo a la instalación registrada. Pedidos, seguimiento y soporte disponibles las 24 horas.
+    </p>
   </div>
 </header>
+
 
 <main class="container py-5">
   <div class="d-flex justify-content-between align-items-end mb-4">
@@ -138,47 +151,31 @@
 
 
     <div class="filtro-item">
-      <label for="filtroTalla">ESPECIFICACIÓN / TALLA</label>
-
-      <select id="filtroTalla" class="filtro-select">
-        <option value="">S, M, L, XL...</option>
-        <option value="S">S</option>
-        <option value="M">M</option>
-        <option value="L">L</option>
-        <option value="XL">XL</option>
-      </select>
+      <label for="filtroBuscar">BUSCAR PRODUCTO</label>
+      <input type="text" id="filtroBuscar" class="filtro-select" placeholder="Nombre del producto...">
     </div>
 
 
     <div class="filtro-item">
-      <label for="filtroMarca">MARCA DESTACADA</label>
-
-      <select id="filtroMarca" class="filtro-select">
-        <option value="">Todas las marcas</option>
-        <option value="Bosch">Bosch</option>
-        <option value="Nike">Nike</option>
-        <option value="Levi's">Levi's</option>
+      <label for="filtroOrden">ORDENAR POR</label>
+      <select id="filtroOrden" class="filtro-select">
+        <option value="">Orden por defecto</option>
+        <option value="nombre-asc">Nombre A-Z</option>
+        <option value="nombre-desc">Nombre Z-A</option>
+        <option value="precio-asc">Precio: menor a mayor</option>
+        <option value="precio-desc">Precio: mayor a menor</option>
+        <option value="stock">Mayor disponibilidad</option>
       </select>
     </div>
 
 
-    <div class="filtro-precio">
-      <label>RANGO DE PRECIO</label>
-
-      <div class="precio-slider">
-        <input type="range" min="0" max="1000000" value="0">
-        <input type="range" min="0" max="1000000" value="1000000">
-      </div>
-    </div>
-
-
     <div class="filtro-chips">
-      <label>CHIPS</label>
+      <label>FILTROS RÁPIDOS</label>
 
       <div class="chips-list">
-        <button type="button" class="chip">Ofertas</button>
-        <button type="button" class="chip">Envío Gratis</button>
-        <button type="button" class="chip">Nuevos</button>
+        <button type="button" class="chip" data-filtro="disponible">En stock</button>
+        <button type="button" class="chip" data-filtro="restringido">Restringido</button>
+        <button type="button" class="chip" data-filtro="economico">Hasta $100.000</button>
       </div>
     </div>
 
@@ -198,53 +195,51 @@
 </footer>
 
 <!-- Carrito lateral -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="carritoOffcanvas" style="width: 420px;">
+<div class="offcanvas offcanvas-end" tabindex="-1" id="carritoOffcanvas" style="width: min(1180px, 96vw);">
   <div class="offcanvas-header" style="background:var(--navy-900); color:var(--paper-50); border-bottom:1px solid rgba(255,255,255,.12);">
     <h5 class="offcanvas-title display-serif h6 mb-0" data-i18n="cart_title">Tu carrito</h5>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
   </div>
 
-  <div class="offcanvas-body p-0 d-flex flex-column" style="background-color: #f6f7f9;">
-    <div id="carrito-aviso-restringido" class="aviso-sensible m-3" style="display:none;">
-      <span data-i18n="cart_restricted_notice_pre">
-        Tu carrito incluye equipo táctico restringido. Para completar este pedido necesitarás
-        registrar el número de consulta de antecedentes judiciales en el
-      </span>
-      <a href="registro.html" data-i18n="cart_restricted_notice_link">formulario de registro</a>.
+  <div class="offcanvas-body carrito-layout p-0">
+    <div class="carrito-list-panel">
+      <div id="carrito-aviso-restringido" class="aviso-sensible m-3" style="display:none;">
+        <span data-i18n="cart_restricted_notice_pre">
+          Tu carrito incluye equipo táctico restringido. Para completar este pedido necesitarás
+          registrar el número de consulta de antecedentes judiciales en el
+        </span>
+        <a href="registro.html" data-i18n="cart_restricted_notice_link">formulario de registro</a>.
+      </div>
+
+      <div id="carrito-items" class="carrito-items-container p-3"></div>
     </div>
 
-    <div id="carrito-items" class="flex-grow-1 overflow-auto p-3"></div>
+    <aside class="carrito-summary-panel">
+      <h3>Resumen del Pedido</h3>
 
-    <div class="p-3 bg-white border-top shadow-sm" style="font-family: 'Segoe UI', sans-serif;">
-      <div class="d-flex justify-content-between mb-2" style="font-size: 14px; color: #333;">
-        <span data-i18n="cart_subtotal_label">Subtotal (<span id="carrito-cantidad-items">0</span> artículos):</span>
-        <span id="carrito-subtotal" class="fw-semibold">$0 COP</span>
+      <div class="carrito-summary-row">
+        <span>Subtotal (<span id="carrito-cantidad-items" data-i18n-ignore="true">0</span> artículos):</span>
+        <span id="carrito-subtotal" class="fw-semibold" data-i18n-ignore="true">$0 COP</span>
       </div>
 
-      <hr style="border-top: 1px solid #dee2e6; margin: 12px 0;">
-
-      <div class="d-flex justify-content-between mb-3" style="font-size: 16px; color: #111;">
-        <span class="fw-bold" data-i18n="cart_total_label">Total a pagar:</span>
-        <span id="carrito-total" class="fw-bold text-dark" style="font-size: 17px;">$0 COP</span>
+      <div class="carrito-summary-row total-row">
+        <span class="fw-bold">Total a pagar:</span>
+        <span id="carrito-total" class="fw-bold text-dark" data-i18n-ignore="true">$0 COP</span>
       </div>
 
-      <div class="d-flex gap-2 mb-3">
-        <input type="text" id="cuponDescuento" class="form-control" placeholder="Código de Descuento" style="font-size: 14px; border-radius: 4px; padding: 8px 12px; border: 1px solid #ced4da;">
-        <button type="button" class="btn btn-outline-dark" onclick="aplicarCupon()" style="font-size: 14px; border-radius: 4px; background-color: #232f3e; color: white; border: none; padding: 0 16px;">
-          Aplicar
-        </button>
+      <div class="carrito-cupon-row">
+        <input type="text" id="cuponDescuento" class="form-control" placeholder="Código de Descuento">
+        <button type="button" class="btn btn-outline-dark" onclick="aplicarCupon()">Aplicar</button>
       </div>
 
-      <button type="button" class="btn w-100 fw-bold text-white mb-2" onclick="confirmarCompra()" style="background-color: #2e7d32; border-radius: 4px; padding: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border: none;">
+      <button type="button" class="btn btn-success carrito-checkout-btn" onclick="confirmarCompra()">
         Proceder al pago seguro
       </button>
 
-      <div class="text-center mt-2">
-        <a href="#" class="text-decoration-underline text-secondary" data-bs-dismiss="offcanvas" style="font-size: 13px;">
-          ← Continuar Comprando
-        </a>
+      <div class="carrito-continuar-wrap">
+        <a href="#" data-bs-dismiss="offcanvas">← Continuar Comprando</a>
       </div>
-    </div>
+    </aside>
   </div>
 </div>
 
@@ -292,9 +287,14 @@
     return '$' + n.toLocaleString('es-CO');
   }
 
-  // Mapa id de categoría -> nombre, para mostrarlo en cada tarjeta
-  // (la tabla productos solo guarda categoria_id, no el nombre).
+  function aplicarCupon() {
+    const codigo = document.getElementById('cuponDescuento')?.value.trim();
+    if (!codigo) { mostrarNotificacion('Ingresa un código de descuento.', 'info'); return; }
+    mostrarNotificacion('Función de cupones próximamente. El código "' + codigo + '" será validado cuando el módulo esté habilitado.', 'info');
+  }
+
   let categoriasPorId = {};
+  let todosLosProductos = [];
 
   async function cargarCategorias() {
     const sel = document.getElementById('filtroCategoria');
@@ -337,6 +337,7 @@
                   data-id="${escapeHtml(p.id)}"
                   data-nombre="${escapeHtml(p.nombre)}"
                   data-precio="${escapeHtml(p.precio)}"
+                  data-imagen="${imgProducto(p)}"
                   data-restringido="${p.restringido === 1 || p.restringido === true}"
                   ${sinStock ? 'disabled' : ''}
                   onclick="agregarAlCarrito(this)">
@@ -350,27 +351,16 @@
     const grid = document.getElementById('catalogo-grid');
     const estado = document.getElementById('estado-productos');
     const contador = document.getElementById('products-count');
-    const categoriaId = document.getElementById('filtroCategoria')?.value;
 
     estado.textContent = 'Cargando productos...';
     grid.innerHTML = '';
 
     try {
-      const url = categoriaId ? API_BASE + '/api/productos?categoria_id=' + categoriaId : API_BASE + '/api/productos';
-      const resp = await fetch(url);
+      const resp = await fetch(API_BASE + '/api/productos');
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const productos = await resp.json();
-
-      if (!productos.length) {
-        grid.innerHTML = '<p class="text-muted">No hay productos disponibles.</p>';
-        estado.textContent = '';
-        contador.textContent = '0 referencias activas';
-        return;
-      }
-
-      grid.innerHTML = productos.map(tarjetaProducto).join('');
+      todosLosProductos = await resp.json();
+      aplicarFiltros();
       estado.textContent = '';
-      contador.textContent = productos.length + ' referencias activas';
     } catch (err) {
       console.error(err);
       grid.innerHTML = '<p class="text-muted">Error cargando productos.</p>';
@@ -379,9 +369,108 @@
     }
   }
 
+  // ── Macro-categorías → IDs de categorías de la BD ──
+  const MACRO_MAP = {
+    'Vestimenta & Moda': ['Dotación', 'Uniformidad', 'Protección personal'],
+    'Herramientas & Equipos': ['Equipo táctico', 'Herramientas', 'Fundas y portas',
+      'Tecnología', 'Tráfico y medición', 'Criminalística', 'Primeros auxilios',
+      'Oficina', 'Papelería oficial']
+  };
+
+  function aplicarFiltros() {
+    let productos = [...todosLosProductos];
+    const grid = document.getElementById('catalogo-grid');
+    const contador = document.getElementById('products-count');
+
+    // 1. Macro-categoría
+    const macroActiva = document.querySelector('.macro-btn.activo')?.textContent.trim();
+    if (macroActiva && macroActiva !== 'Ver Todo') {
+      const categoriasPermitidas = MACRO_MAP[macroActiva] || [];
+      if (categoriasPermitidas.length) {
+        const idsPermitidos = Object.entries(categoriasPorId)
+          .filter(([_, nombre]) => categoriasPermitidas.includes(nombre))
+          .map(([id]) => Number(id));
+        productos = productos.filter(p => idsPermitidos.includes(Number(p.categoria_id)));
+      }
+    }
+
+    // 2. Categoría dropdown
+    const categoriaId = document.getElementById('filtroCategoria')?.value;
+    if (categoriaId) {
+      productos = productos.filter(p => String(p.categoria_id) === String(categoriaId));
+    }
+
+    // 3. Búsqueda por texto
+    const buscar = document.getElementById('filtroBuscar')?.value.trim().toLowerCase();
+    if (buscar) {
+      productos = productos.filter(p =>
+        p.nombre.toLowerCase().includes(buscar) ||
+        (p.descripcion || '').toLowerCase().includes(buscar)
+      );
+    }
+
+
+    // 5. Chips de filtro rápido
+    document.querySelectorAll('.chip.activo').forEach(chip => {
+      const filtro = chip.dataset.filtro;
+      if (filtro === 'disponible') productos = productos.filter(p => Number(p.cantidad_disponible) > 0);
+      if (filtro === 'restringido') productos = productos.filter(p => p.restringido);
+      if (filtro === 'economico') productos = productos.filter(p => Number(p.precio) <= 100000);
+    });
+
+    // 6. Ordenamiento
+    const orden = document.getElementById('filtroOrden')?.value;
+    if (orden === 'nombre-asc') productos.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    else if (orden === 'nombre-desc') productos.sort((a, b) => b.nombre.localeCompare(a.nombre));
+    else if (orden === 'precio-asc') productos.sort((a, b) => Number(a.precio) - Number(b.precio));
+    else if (orden === 'precio-desc') productos.sort((a, b) => Number(b.precio) - Number(a.precio));
+    else if (orden === 'stock') productos.sort((a, b) => Number(b.cantidad_disponible) - Number(a.cantidad_disponible));
+
+    // Renderizar
+    if (!productos.length) {
+      grid.innerHTML = '<p class="text-muted py-4 text-center">No hay productos que coincidan con los filtros seleccionados.</p>';
+      contador.textContent = '0 referencias activas';
+      return;
+    }
+    grid.innerHTML = productos.map(tarjetaProducto).join('');
+    contador.textContent = productos.length + ' referencias activas';
+  }
+
+  // ── Event listeners para todos los filtros ──
   document.addEventListener('DOMContentLoaded', () => {
     cargarCategorias().then(cargarProductos);
-    document.getElementById('filtroCategoria').addEventListener('change', cargarProductos);
+
+    // Categoría dropdown
+    document.getElementById('filtroCategoria').addEventListener('change', aplicarFiltros);
+
+    // Macro-categorías
+    document.querySelector('.macro-opciones')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.macro-btn');
+      if (!btn) return;
+      document.querySelectorAll('.macro-btn').forEach(b => b.classList.remove('activo'));
+      btn.classList.add('activo');
+      aplicarFiltros();
+    });
+
+    // Búsqueda con debounce
+    let buscadorTimeout;
+    document.getElementById('filtroBuscar')?.addEventListener('input', () => {
+      clearTimeout(buscadorTimeout);
+      buscadorTimeout = setTimeout(aplicarFiltros, 300);
+    });
+
+    // Ordenamiento
+    document.getElementById('filtroOrden')?.addEventListener('change', aplicarFiltros);
+
+
+
+    // Chips
+    document.querySelector('.chips-list')?.addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      chip.classList.toggle('activo');
+      aplicarFiltros();
+    });
   });
 </script>
 </body>

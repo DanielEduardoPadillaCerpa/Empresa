@@ -11,6 +11,52 @@ const API_BASE = 'http://localhost:8081';
 
 const AUTH_KEY = 'si_auth';
 
+function portalToastStack() {
+  let stack = document.getElementById('portal-toast-stack');
+  if (!stack) {
+    stack = document.createElement('div');
+    stack.id = 'portal-toast-stack';
+    stack.className = 'portal-toast-stack';
+    stack.setAttribute('aria-live', 'polite');
+    document.body.appendChild(stack);
+  }
+  return stack;
+}
+
+function mostrarNotificacion(mensaje, tipo = 'info', duracion = 3000) {
+  const toast = document.createElement('div');
+  toast.className = `portal-toast portal-toast--${tipo}`;
+  toast.setAttribute('role', 'status');
+  const contenido = document.createElement('span');
+  contenido.textContent = String(mensaje);
+  const cerrarBtn = document.createElement('button');
+  cerrarBtn.type = 'button';
+  cerrarBtn.className = 'portal-toast__close';
+  cerrarBtn.setAttribute('aria-label', 'Cerrar');
+  cerrarBtn.textContent = '×';
+  toast.append(contenido, cerrarBtn);
+  const cerrar = () => toast.remove();
+  cerrarBtn.addEventListener('click', cerrar);
+  portalToastStack().appendChild(toast);
+  window.setTimeout(cerrar, duracion);
+  return toast;
+}
+
+function confirmarAccion(mensaje) {
+  return new Promise(resolve => {
+    const toast = mostrarNotificacion('', 'info', 10000);
+    const contenido = toast.querySelector('span');
+    contenido.textContent = String(mensaje);
+    const acciones = document.createElement('div');
+    acciones.className = 'portal-confirm__actions';
+    acciones.innerHTML = '<button type="button" class="btn btn-sm btn-dark" data-confirmar>Sí, continuar</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cancelar>Cancelar</button>';
+    contenido.appendChild(acciones);
+    const terminar = resultado => { toast.remove(); resolve(resultado); };
+    toast.querySelector('[data-confirmar]').addEventListener('click', () => terminar(true));
+    toast.querySelector('[data-cancelar]').addEventListener('click', () => terminar(false));
+  });
+}
+
 function authGuardar(datos) {
   localStorage.setItem(AUTH_KEY, JSON.stringify(datos));
   authRenderNavbar();
@@ -52,12 +98,28 @@ function authRenderNavbar() {
   if (slot) {
     if (logueado) {
       slot.innerHTML = `
-        <span class="small me-2" style="color:var(--paper-100);">👤 ${sesion.correo}</span>
-        <button class="btn btn-sm" style="border:1px solid var(--brass-600); color:var(--brass-500); background:transparent;" onclick="authCerrarSesion()">Cerrar sesión</button>
+        <a href="#" class="nav-link" 
+           data-bs-toggle="tooltip" 
+           data-bs-placement="bottom" 
+           title="${sesion.correo}">
+          <i class="bi bi-person-circle"></i>
+        </a>
+        <button class="btn btn-sm"
+                style="border:1px solid var(--brass-600);
+                       color:var(--brass-500);
+                       background:transparent;"
+                onclick="authCerrarSesion()">
+          Cerrar sesión
+        </button>
       `;
     } else {
       slot.innerHTML = `
-        <a href="login.html" class="btn btn-sm" style="border:1px solid var(--brass-600); color:var(--brass-500); background:transparent;">Iniciar sesión</a>
+        <a href="login.html" class="btn btn-sm"
+           style="border:1px solid var(--brass-600);
+                  color:var(--brass-500);
+                  background:transparent;">
+          Iniciar sesión
+        </a>
       `;
     }
   }
@@ -71,7 +133,12 @@ function authRenderNavbar() {
   document.querySelectorAll('.nav-cliente-link').forEach(el => {
     el.style.display = logueado ? '' : 'none';
   });
+
+  // Inicializar tooltips de Bootstrap
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
 }
+
 
 // Llama esto antes de dejar avanzar al checkout. Si no hay sesión,
 // redirige a login.html y recuerda a dónde volver.

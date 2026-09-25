@@ -32,29 +32,29 @@
   </div>
 </nav>
 
-<header class="hero py-5">
-  <div class="container py-3">
-    <div class="eyebrow mb-2" data-i18n="registration_header">Ficha del titular · Ley 1581 de 2012</div>
-    <h1 class="display-serif h2 mb-2" data-i18n="registration_title">Registro de cliente</h1>
-    <p class="lead col-lg-8 mb-0" data-i18n="registration_lead">Cada dato solicitado está clasificado según su nivel de sensibilidad. Solo recolectamos lo estrictamente necesario para procesar tu pedido.</p>
+<header class="hero py-3 text-center" 
+        style="background: linear-gradient(to bottom, #2c3e50 0%, #1a252f 100%); color: #fff;">
+  <div class="container py-3 text-center">
+    <div class="eyebrow mb-2 text-center" data-i18n="registration_header">
+      Ficha del titular · Ley 1581 de 2012
+    </div>
+    <h1 class="display-serif h2 mb-2 text-center" data-i18n="registration_title">
+      Registro de cliente
+    </h1>
+    <p class="lead col-lg-8 mb-0 mx-auto text-center" data-i18n="registration_lead">
+      Cada dato solicitado está clasificado según su nivel de sensibilidad. 
+      Solo recolectamos lo estrictamente necesario para procesar tu pedido.
+    </p>
   </div>
 </header>
+
+
+
+
 
 <main class="container py-5">
   <div class="row">
     <div class="col-lg-8">
-
-      <div class="mb-3 d-flex flex-wrap gap-3 leyenda-clasif">
-        <span><span class="dot" style="background:var(--tag-publico)"></span><span data-i18n="privacy_public">Público</span></span>
-        <span><span class="dot" style="background:var(--tag-semiprivado)"></span><span data-i18n="privacy_semiprivate">Semiprivado</span></span>
-        <span><span class="dot" style="background:var(--tag-privado)"></span><span data-i18n="privacy_private">Privado</span></span>
-        <span><span class="dot" style="background:var(--tag-sensible)"></span><span data-i18n="privacy_sensitive">Sensible</span></span>
-      </div>
-
-      <div class="mb-4">
-        <label class="form-label small text-muted" data-i18n="registration_backend_url">URL del backend</label>
-        <input type="text" id="apiBase" class="form-control form-control-sm" style="max-width:340px;" value="http://localhost:8081">
-      </div>
 
       <form id="form-registro" novalidate>
 
