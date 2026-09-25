@@ -80,6 +80,86 @@ body {
   box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
 }
 
+.admin-page {
+  background: #f8fafc;
+}
+
+.admin-page .navbar-institucional {
+  height: 60px;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.admin-page .admin-hero {
+  padding: 1.5rem 0 !important;
+  background: transparent;
+  color: var(--navy-900);
+}
+
+.admin-page .admin-hero .eyebrow {
+  color: var(--blue-500);
+}
+
+.admin-page .admin-hero h1,
+.admin-page .admin-hero p {
+  color: var(--navy-900);
+}
+
+.btn-master {
+  background-color: #0284c7 !important;
+  border-color: #0284c7 !important;
+  color: #fff !important;
+  transition: background-color .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.btn-master:hover,
+.btn-master:focus-visible {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #fff !important;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.filter-chip {
+  border: 1px solid rgba(15, 23, 42, .16);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--navy-900);
+  padding: .5rem .85rem;
+  font-size: .82rem;
+  font-weight: 600;
+  transition: .2s ease;
+}
+
+.filter-chip:hover,
+.filter-chip.active {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #fff;
+}
+
+.stock-low {
+  color: #b45309 !important;
+  font-weight: 700;
+}
+
+.stock-critical {
+  color: #dc2626 !important;
+  font-weight: 800;
+}
+
+.admin-card {
+  border: 1px solid rgba(148, 163, 184, .2);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: var(--shadow-soft);
+}
+
 .navbar-institucional .nav-link,
 .navbar-institucional .navbar-brand,
 .navbar-institucional .btn,

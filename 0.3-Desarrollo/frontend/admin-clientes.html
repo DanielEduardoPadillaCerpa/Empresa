@@ -6,10 +6,32 @@
 <title>Clientes registrados — Panel administrativo</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<style>
+  .clientes-page { background: #f8fafc; min-height: 100vh; }
+  .navbar-clientes { box-shadow: 0 1px 12px rgba(15, 23, 42, .1); }
+  .clientes-intro { padding: 2.25rem 0 1.5rem; }
+  .clientes-intro h1 { color: #0f172a; font-weight: 700; }
+  .clientes-toolbar { background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 1rem 1.25rem; box-shadow: 0 4px 16px rgba(15, 23, 42, .04); }
+  .btn-nuevo-cliente { background: #0284c7; border-color: #0284c7; color: #fff; font-weight: 700; }
+  .btn-nuevo-cliente:hover, .btn-nuevo-cliente:focus { background: #dc2626; border-color: #dc2626; color: #fff; }
+  .clientes-seccion { margin-top: 2rem; }
+  .clientes-seccion h2 { color: #0f172a; font-size: 1.15rem; font-weight: 700; }
+  .clientes-seccion h2 span { color: #64748b; font-size: .8rem; font-weight: 500; }
+  .clientes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(285px, 1fr)); gap: 1rem; }
+  .cliente-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 1.15rem; box-shadow: 0 5px 18px rgba(15, 23, 42, .05); }
+  .cliente-card h3 { color: #0f172a; font-size: 1rem; font-weight: 700; margin: 0; }
+  .cliente-meta { color: #64748b; font-size: .82rem; }
+  .cliente-dato { border-top: 1px solid #f1f5f9; padding-top: .65rem; margin-top: .65rem; }
+  .cliente-dato strong { color: #334155; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }
+  .cliente-dato div { color: #0f172a; overflow-wrap: anywhere; }
+  .cliente-actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1rem; }
+  .estado-vacio { border: 1px dashed #cbd5e1; border-radius: 1rem; color: #64748b; padding: 2.5rem 1rem; text-align: center; background: #fff; }
+  .badge-tipo { background: #e0f2fe; color: #0369a1; font-size: .68rem; }
+</style>
 </head>
-<body>
+<body class="clientes-page">
 
-<nav class="navbar navbar-expand-lg navbar-institucional py-3">
+<nav class="navbar navbar-expand-lg navbar-institucional py-2 navbar-clientes">
   <div class="container">
     <a class="navbar-brand" href="index.html" data-i18n="nav_brand">
       Suministros Institucionales
@@ -28,46 +50,28 @@
   </div>
 </nav>
 
-<header class="hero py-5 text-center"
-        style="background: linear-gradient(to bottom, rgb(52, 27, 139) 0%, rgb(0, 0, 0) 100%);
-               color: var(--paper-50);">
-  <div class="container  d-flex flex-column align-items-center text-center">
-    <div class="eyebrow mb-2" data-i18n="admin_clients_header">Panel administrativo · Acceso restringido</div>
-    <h1 class="display-serif h2 mb-2" data-i18n="admin_clients_title">Clientes registrados</h1>
-    <p class="lead col-lg-8 mb-0" data-i18n="admin_clients_lead">Datos privados descifrados solo para personal autorizado. No compartas esta pantalla ni la dejes accesible sin control de acceso en producción.</p>
-  </div>
-</header>
-
 <main class="container py-5">
-
-  <div class="mb-4 d-flex flex-wrap gap-2 align-items-center justify-content-between">
+  <div class="clientes-intro">
+    <div class="eyebrow mb-2" data-i18n="admin_clients_header">Panel administrativo · Acceso restringido</div>
+    <h1 class="h2 mb-2" data-i18n="admin_clients_title">Clientes registrados</h1>
+    <p class="text-secondary mb-0" data-i18n="admin_clients_lead">Datos privados descifrados solo para personal autorizado. No compartas esta pantalla ni la dejes accesible sin control de acceso en producción.</p>
+  </div>
+  <div class="clientes-toolbar mb-4 d-flex flex-wrap gap-2 align-items-center justify-content-between">
     <div class="d-flex flex-wrap gap-2 align-items-center">
       <input type="hidden" id="apiBase" value="http://localhost:8081">
-      <button class="btn btn-sm btn-dark" onclick="cargarClientes()" data-i18n="admin_clients_load_btn">Cargar clientes</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="cargarClientes()" data-i18n="admin_clients_load_btn">Actualizar clientes</button>
     </div>
-    <button class="btn btn-sm" style="background:var(--brass-600); color:#fff;" onclick="window.location.href='registro.html'" data-i18n="admin_clients_new_btn">+ Nuevo cliente</button>
+    <button class="btn btn-sm btn-nuevo-cliente" onclick="abrirModalNuevoCliente()" data-i18n="admin_clients_new_btn">+ Nuevo cliente</button>
   </div>
 
   <div id="estado" class="d-none"></div>
-
-  <div class="table-responsive" style="background:var(--paper-50); border:1px solid rgba(11,35,64,0.12);">
-    <table class="table table-sm mb-0 align-middle">
-      <thead style="background:var(--navy-900); color:var(--paper-100);">
-        <tr>
-          <th>ID</th>
-          <th>Unidad <span class="badge rounded-pill" style="background:var(--tag-publico); font-size:.6rem;">público</span></th>
-          <th>NIT <span class="badge rounded-pill" style="background:var(--tag-semiprivado); font-size:.6rem;">semiprivado</span></th>
-          <th>Funcionario <span class="badge rounded-pill" style="background:var(--tag-privado); font-size:.6rem;">privado</span></th>
-          <th>Correo <span class="badge rounded-pill" style="background:var(--tag-privado); font-size:.6rem;">privado</span></th>
-          <th>Teléfono <span class="badge rounded-pill" style="background:var(--tag-privado); font-size:.6rem;">privado</span></th>
-          <th>Registrado</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="tbodyClientes">
-        <tr><td colspan="8" class="text-center text-muted py-4" data-i18n="admin_clients_no_data">Sin datos cargados todavía.</td></tr>
-      </tbody>
-    </table>
+  <div id="clientesB2B" class="clientes-seccion">
+    <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="mb-0">Clientes B2B <span>· Empresas e instituciones con NIT</span></h2><span class="badge rounded-pill bg-light text-secondary" id="contadorB2B">0</span></div>
+    <div id="gridB2B" class="clientes-grid"><div class="estado-vacio">Sin datos cargados todavía.</div></div>
+  </div>
+  <div id="clientesB2C" class="clientes-seccion">
+    <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="mb-0">Clientes B2C <span>· Personas con cédula y estaciones asociadas</span></h2><span class="badge rounded-pill bg-light text-secondary" id="contadorB2C">0</span></div>
+    <div id="gridB2C" class="clientes-grid"><div class="estado-vacio">Sin datos cargados todavía.</div></div>
   </div>
 </main>
 
@@ -184,13 +188,46 @@ function authHeaders(sesion, extra) {
 // formulario de edición sin volver a pedirlos al backend.
 let clientesCache = [];
 
+function esClienteB2C(cliente) {
+  return String(cliente.tipo || cliente.tipoCliente || '').toUpperCase() === 'B2C'
+    || Boolean(cliente.cedula || cliente.documento || cliente.estaciones);
+}
+
+function renderClienteCard(cliente, b2c) {
+  const documento = b2c ? (cliente.cedula || cliente.documento || 'No registrado') : (cliente.nit || 'No registrado');
+  const estaciones = b2c ? (Array.isArray(cliente.estaciones) ? cliente.estaciones.join(', ') : (cliente.estaciones || 'Sin estaciones asociadas')) : '';
+  return `<article class="cliente-card">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+      <div><span class="badge rounded-pill badge-tipo">${b2c ? 'B2C · Cédula' : 'B2B · NIT'}</span><h3 class="mt-2">${escapeHtml(cliente.nombreUnidad || cliente.nombre || 'Cliente sin nombre')}</h3></div>
+      <span class="cliente-meta">#${escapeHtml(cliente.id)}</span>
+    </div>
+    <div class="cliente-dato"><strong>${b2c ? 'Cédula' : 'NIT'}</strong><div>${escapeHtml(documento)}</div></div>
+    ${b2c ? `<div class="cliente-dato"><strong>Estaciones</strong><div>${escapeHtml(estaciones)}</div></div>` : `<div class="cliente-dato"><strong>Funcionario responsable</strong><div>${escapeHtml(cliente.nombreFuncionario || 'No registrado')}</div></div>`}
+    <div class="cliente-dato"><strong>Contacto</strong><div>${escapeHtml(cliente.correo || 'Sin correo')} · ${escapeHtml(cliente.telefono || 'Sin teléfono')}</div></div>
+    <div class="cliente-meta mt-2">Registrado: ${escapeHtml((cliente.fechaRegistro ?? '').toString().replace('T', ' ').slice(0, 16) || 'Sin fecha')}</div>
+    <div class="cliente-actions">
+      <button class="btn btn-sm btn-primary" onclick="verCompras(${JSON.stringify(cliente.id)})">Ver compras</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarCliente(${JSON.stringify(cliente.id)})">Editar</button>
+      <button class="btn btn-sm btn-outline-danger" onclick="eliminarCliente(${JSON.stringify(cliente.id)})">Eliminar</button>
+    </div>
+  </article>`;
+}
+
+function renderClientes(clientes) {
+  const b2b = clientes.filter(c => !esClienteB2C(c));
+  const b2c = clientes.filter(esClienteB2C);
+  document.getElementById('contadorB2B').textContent = b2b.length;
+  document.getElementById('contadorB2C').textContent = b2c.length;
+  document.getElementById('gridB2B').innerHTML = b2b.length ? b2b.map(c => renderClienteCard(c, false)).join('') : '<div class="estado-vacio">No hay clientes B2B registrados.</div>';
+  document.getElementById('gridB2C').innerHTML = b2c.length ? b2c.map(c => renderClienteCard(c, true)).join('') : '<div class="estado-vacio">No hay clientes B2C registrados.</div>';
+}
+
 async function cargarClientes() {
   const sesion = exigirSesion();
   if (!sesion) return;
 
   const base = apiBaseUrl();
   const estado = document.getElementById('estado');
-  const tbody = document.getElementById('tbodyClientes');
   estado.textContent = 'Consultando ' + base + '/api/clientes ...';
   try {
     const resp = await fetch(base + '/api/clientes', {
@@ -203,29 +240,11 @@ async function cargarClientes() {
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const clientes = await resp.json();
     clientesCache = clientes;
-    if (!clientes.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4" data-i18n="admin_clients_no_customers">Aún no hay clientes registrados.</td></tr>';
-    } else {
-      tbody.innerHTML = clientes.map(c => `
-        <tr>
-          <td class="text-muted">${escapeHtml(c.id)}</td>
-          <td>${escapeHtml(c.nombreUnidad)}</td>
-          <td>${escapeHtml(c.nit)}</td>
-          <td>${escapeHtml(c.nombreFuncionario)}</td>
-          <td>${escapeHtml(c.correo)}</td>
-          <td>${escapeHtml(c.telefono)}</td>
-          <td class="small text-muted">${escapeHtml((c.fechaRegistro ?? '').toString().replace('T', ' ').slice(0,16))}</td>
-          <td class="text-nowrap">
-            <button class="btn btn-sm btn-outline-dark" onclick="verCompras(${JSON.stringify(c.id)})">Ver compras</button>
-            <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarCliente(${JSON.stringify(c.id)})">Editar</button>
-            <button class="btn btn-sm btn-outline-danger" onclick="eliminarCliente(${JSON.stringify(c.id)})">Eliminar</button>
-          </td>
-        </tr>`).join('');
-    }
+    renderClientes(clientes);
     estado.textContent = clientes.length + ' cliente(s) cargado(s).';
   } catch (err) {
     estado.textContent = '';
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Sin datos disponibles temporalmente.</td></tr>';
+    renderClientes([]);
     mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }
 }
@@ -353,6 +372,7 @@ async function guardarCliente() {
   } catch (err) {
     errEl.textContent = 'No se pudo guardar el cliente (' + err.message + ').';
     errEl.style.display = 'block';
+    mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Guardar';
@@ -384,6 +404,7 @@ async function eliminarCliente(clienteId) {
     await cargarClientes();
   } catch (err) {
     estado.textContent = 'No se pudo eliminar el cliente (' + err.message + ').';
+    mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }
 }
 </script>

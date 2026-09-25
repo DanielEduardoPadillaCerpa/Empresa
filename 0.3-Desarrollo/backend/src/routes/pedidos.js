@@ -59,7 +59,8 @@ router.post('/', requiereAutenticacion, async (req, res) => {
         id: producto[0].id,
         nombre: producto[0].nombre,
         cantidad: Number(item.cantidad),
-        precio: Number(producto[0].precio)
+        precio: Number(producto[0].precio),
+        ...(item.variacion ? { variacion: String(item.variacion) } : {})
       });
     }
 
@@ -191,7 +192,8 @@ router.put('/:id/cancelar', requiereAutenticacion, async (req, res) => {
 router.put('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
   try {
     const { estado } = req.body;
-    if (!['pendiente', 'enviado', 'entregado', 'cancelado'].includes(estado)) {
+    // Se conservan los estados históricos y se añaden las etapas del timeline.
+    if (!['pendiente', 'confirmado', 'preparado', 'enviado', 'entregado', 'cancelado'].includes(estado)) {
       return res.status(400).json({ error: 'Estado inválido' });
     }
 

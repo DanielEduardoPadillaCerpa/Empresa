@@ -163,6 +163,12 @@ async function migrar() {
       FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+  // Amplía el catálogo sin borrar pedidos ni estados legacy existentes.
+  await pool.query(`
+    ALTER TABLE pedidos MODIFY estado
+      ENUM('pendiente','confirmado','preparado','enviado','entregado','cancelado')
+      DEFAULT 'pendiente'
+  `);
 
   // Categorías
   await pool.query(`
@@ -294,13 +300,13 @@ async function migrar() {
 // columnas/valores). Cada ALTER va en su propio try/catch: si la base ya
 // tiene el cambio aplicado, MySQL lanza error y simplemente se ignora.
 async function migrarColumnasFaltantes() {
-  // El estado "cancelado" no existía en versiones anteriores del ENUM.
+  // Mantiene compatibles las instalaciones antiguas con el timeline operativo.
   try {
     await pool.query(
-      "ALTER TABLE pedidos MODIFY estado ENUM('pendiente','enviado','entregado','cancelado') DEFAULT 'pendiente'"
+      "ALTER TABLE pedidos MODIFY estado ENUM('pendiente','confirmado','preparado','enviado','entregado','cancelado') DEFAULT 'pendiente'"
     );
   } catch (err) {
-    console.warn('[db] No se pudo ajustar el ENUM de pedidos.estado (puede que ya esté actualizado):', err.message);
+    console.warn('[db] No se pudo ajustar el estado de pedidos:', err.message);
   }
 
   try {

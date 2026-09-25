@@ -9,7 +9,7 @@
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-institucional py-3">
+<nav class="navbar navbar-expand-lg navbar-institucional py-2">
   <div class="container">
     <a class="navbar-brand" href="index.html">
       <span data-i18n="nav_brand">Suministros Institucionales</span>
@@ -27,41 +27,20 @@
   </div>
 </nav>
 
-<header class="hero py-5 text-center"
-        style="background: linear-gradient(to bottom, rgb(52, 27, 139) 0%, rgb(0, 0, 0) 100%);
-               color: var(--paper-50);">
-  <div class="container  d-flex flex-column align-items-center text-center">
-    <div class="eyebrow mb-2" data-i18n="admin_orders_header">Panel administrativo · Acceso restringido</div>
-    <h1 class="display-serif h2 mb-2" data-i18n="admin_orders_title">Pedidos registrados</h1>
-    <p class="lead col-lg-8 mb-0" data-i18n="admin_orders_lead">Consulta todos los pedidos de clientes y actualiza su estado.</p>
-  </div>
-</header>
-
-<main class="container py-5">
-  <div class="mb-4 d-flex flex-wrap gap-2 align-items-center">
+<main class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <div class="eyebrow text-muted" data-i18n="admin_orders_header">Panel administrativo · Acceso restringido</div>
+      <h1 class="display-serif h2 mb-0" data-i18n="admin_orders_title">Pedidos registrados</h1>
+    </div>
     <input type="hidden" id="apiBase" value="http://localhost:8081">
-    <button class="btn btn-sm btn-dark" onclick="cargarPedidos()" data-i18n="admin_orders_load">Cargar pedidos</button>
+    <button class="btn btn-dark" type="button" onclick="cargarPedidos()" data-i18n="admin_orders_load">Actualizar pedidos</button>
   </div>
 
-  <div id="estado" class="d-none"></div>
-
-  <div class="table-responsive" style="background:var(--paper-50); border:1px solid rgba(11,35,64,0.12);">
-    <table class="table table-sm mb-0 align-middle">
-      <thead style="background:var(--navy-900); color:var(--paper-100);">
-        <tr>
-          <th data-i18n="admin_orders_id">ID</th>
-          <th data-i18n="admin_orders_date">Fecha</th>
-          <th data-i18n="admin_orders_products">Productos</th>
-          <th data-i18n="admin_orders_total">Total</th>
-          <th data-i18n="admin_orders_status">Estado</th>
-          <th data-i18n="admin_orders_customer">Cliente</th>
-        </tr>
-      </thead>
-      <tbody id="tbodyPedidos">
-        <tr><td colspan="6" class="text-center text-muted py-4" data-i18n="admin_orders_no_data">Sin pedidos todavía.</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <div id="estado" class="small text-muted mb-3" aria-live="polite"></div>
+  <section id="pedidosLista" class="d-grid gap-4" aria-live="polite">
+    <div class="card-elevated p-5 text-center text-muted">Cargando pedidos…</div>
+  </section>
 </main>
 
 <footer class="institucional py-4">
@@ -97,7 +76,7 @@ function exigirSesion() {
 async function cargarPedidos() {
   const base = document.getElementById('apiBase').value.replace(/\/$/, '');
   const estado = document.getElementById('estado');
-  const tbody = document.getElementById('tbodyPedidos');
+  const lista = document.getElementById('pedidosLista');
   estado.textContent = 'Consultando ' + base + '/api/pedidos/todos ...';
 
   const sesion = exigirSesion();
@@ -115,38 +94,70 @@ async function cargarPedidos() {
     const pedidos = await resp.json();
 
     if (!pedidos.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4" data-i18n="admin_orders_empty">No hay pedidos registrados.</td></tr>';
-    } else {
-      tbody.innerHTML = pedidos.map(p => `
-        <tr>
-          <td>${p.id}</td>
-          <td>${new Date(p.fechaPedido).toLocaleString()}</td>
-          <td>${p.items.map(i => i.nombre + ' × ' + i.cantidad).join(', ')}</td>
-          <td>$${p.total}</td>
-          <td>
-            <select onchange="actualizarEstado(${p.id}, this.value)">
-              <option value="pendiente" data-i18n="admin_orders_pending" ${p.estado==='pendiente'?'selected':''}>Pendiente</option>
-              <option value="enviado" data-i18n="admin_orders_sent" ${p.estado==='enviado'?'selected':''}>Enviado</option>
-              <option value="entregado" data-i18n="admin_orders_delivered" ${p.estado==='entregado'?'selected':''}>Entregado</option>
-              <option value="cancelado" data-i18n="admin_orders_cancelled" ${p.estado==='cancelado'?'selected':''}>Cancelado</option>
-            </select>
-          </td>
-          <td>${escapeHtml(p.cliente.unidad)} (${escapeHtml(p.cliente.nit || '')})</td>
-        </tr>`).join('');
-    }
+      lista.innerHTML = '<div class="card-elevated p-5 text-center text-muted"><div class="fs-1 mb-2">∅</div><p class="mb-0" data-i18n="admin_orders_empty">No hay pedidos registrados.</p></div>';
+    } else lista.innerHTML = pedidos.map(renderPedido).join('');
     estado.textContent = pedidos.length + ' pedido(s) cargado(s).';
   } catch (err) {
     estado.textContent = '';
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Sin datos disponibles temporalmente.</td></tr>';
+    lista.innerHTML = '<div class="card-elevated p-5 text-center text-muted"><p class="mb-0">No fue posible cargar los pedidos.</p><small>Comprueba la conexión e inténtalo de nuevo.</small></div>';
     mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }
 }
 
-async function actualizarEstado(pedidoId, nuevoEstado) {
+const ESTADOS_TIMELINE = [
+  ['pendiente', 'Pendiente'],
+  ['confirmado', 'Confirmado'],
+  ['preparado', 'Preparado'],
+  ['enviado', 'Enviado'],
+  ['entregado', 'Entregado']
+];
+const ESTADO_LEGACY = { pendiente: 'pendiente', enviado: 'enviado', entregado: 'entregado', cancelado: 'cancelado' };
+const ETIQUETAS = Object.fromEntries(ESTADOS_TIMELINE);
+const formatearPrecio = valor => '$' + Number(valor || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+
+function renderPedido(p) {
+  const estado = ESTADO_LEGACY[p.estado] || p.estado || 'pendiente';
+  const indice = Math.max(0, ESTADOS_TIMELINE.findIndex(([key]) => key === estado));
+  const subtotalNeto = Number(p.total || 0) / 1.19;
+  const iva = Number(p.total || 0) - subtotalNeto;
+  const timeline = ESTADOS_TIMELINE.map(([key, label], i) =>
+    `<div class="text-center flex-fill ${i <= indice ? 'text-success' : 'text-muted'}" style="min-width:82px">
+      <div class="rounded-circle mx-auto mb-1 ${i <= indice ? 'bg-success' : 'bg-light border'}" style="width:14px;height:14px"></div>
+      <small>${label}</small>
+    </div>`).join('');
+  const items = (p.items || []).map(item => `<li class="d-flex justify-content-between gap-3 py-2 border-bottom">
+    <span><strong>${escapeHtml(item.nombre)}</strong><br><small class="text-muted">Cantidad: ${escapeHtml(item.cantidad)}${item.variacion ? ' · Variación: ' + escapeHtml(item.variacion) : ''}</small></span>
+    <strong class="text-nowrap">${formatearPrecio(Number(item.precio || item.precio_unitario || 0) * Number(item.cantidad || 0))}</strong>
+  </li>`).join('');
+  const opciones = ESTADOS_TIMELINE.map(([key, label]) => `<option value="${key}" ${key === estado ? 'selected' : ''}>${label}</option>`).join('');
+  return `<article class="card-elevated p-4">
+    <div class="d-flex flex-wrap justify-content-between gap-3 mb-3">
+      <div><div class="font-monospace text-uppercase small text-muted">Pedido #${escapeHtml(p.id)}</div>
+      <div class="small text-muted">${new Date(p.fechaPedido).toLocaleString('es-CO')}</div>
+      <div class="small mt-1">${escapeHtml(p.cliente?.unidad || '')}${p.cliente?.nit ? ' · NIT ' + escapeHtml(p.cliente.nit) : ''}</div></div>
+      <label class="small text-muted">Estado<select data-estado-anterior="${escapeHtml(estado)}" class="form-select form-select-sm mt-1" onchange="actualizarEstado(${Number(p.id)}, this.value, this)">${opciones}${p.estado === 'cancelado' ? '<option selected value="cancelado">Cancelado (histórico)</option>' : ''}</select></label>
+    </div>
+    <div class="d-flex align-items-start mb-4">${timeline}</div>
+    <div class="row g-4"><div class="col-lg-7"><h2 class="h6 text-uppercase text-muted">Artículos</h2><ul class="list-unstyled mb-0">${items || '<li class="text-muted">Sin detalle disponible.</li>'}</ul></div>
+      <div class="col-lg-5"><h2 class="h6 text-uppercase text-muted">Resumen financiero</h2><div class="bg-light rounded p-3">
+        <div class="d-flex justify-content-between py-1"><span>Subtotal Neto</span><strong>${formatearPrecio(subtotalNeto)}</strong></div>
+        <div class="d-flex justify-content-between py-1 border-bottom"><span>IVA 19%</span><strong>${formatearPrecio(iva)}</strong></div>
+        <div class="d-flex justify-content-between pt-2 fs-5"><span>Gran Total</span><strong>${formatearPrecio(p.total)}</strong></div>
+      </div></div>
+    </div>
+  </article>`;
+}
+
+async function actualizarEstado(pedidoId, nuevoEstado, selector) {
   const base = document.getElementById('apiBase').value.replace(/\/$/, '');
   const sesion = authLeer();
   if (!sesion?.token) {
     window.location.href = 'login.html?redirect=admin-pedidos.html';
+    return;
+  }
+  const confirmado = await confirmarAccion('¿Actualizar el pedido #' + pedidoId + ' a "' + (ETIQUETAS[nuevoEstado] || nuevoEstado) + '"?');
+  if (!confirmado) {
+    if (selector) selector.value = selector.dataset.estadoAnterior || 'pendiente';
     return;
   }
   try {
@@ -159,8 +170,11 @@ async function actualizarEstado(pedidoId, nuevoEstado) {
       body: JSON.stringify({ estado: nuevoEstado })
     });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    document.getElementById('estado').textContent = 'Pedido ' + pedidoId + ' actualizado a ' + nuevoEstado;
+    if (selector) selector.dataset.estadoAnterior = nuevoEstado;
+    document.getElementById('estado').textContent = 'Pedido #' + pedidoId + ' actualizado a ' + (ETIQUETAS[nuevoEstado] || nuevoEstado) + '.';
+    mostrarNotificacion('Estado actualizado correctamente.', 'success');
   } catch (err) {
+    if (selector) selector.value = 'pendiente';
     document.getElementById('estado').textContent = '';
     mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
   }

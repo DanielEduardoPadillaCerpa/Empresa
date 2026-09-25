@@ -6,10 +6,19 @@
 <title>Productos — Panel administrativo</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<style>
+.btn-nuevo-producto { background:#0284c7; color:#fff; border:1px solid #0284c7; }
+.btn-nuevo-producto:hover, .btn-nuevo-producto:focus { background:#dc2626; border-color:#dc2626; color:#fff; }
+.upload-zone { border:1px dashed #94a3b8; border-radius:.5rem; padding:.8rem; display:flex; flex-direction:column; gap:.2rem; cursor:pointer; background:#f8fafc; }
+.upload-zone.is-dragging { border-color:#0284c7; background:#e0f2fe; }
+.upload-zone-name { color:#475569; font-size:.85rem; }
+.stock-badge { display:inline-block; border-radius:999px; padding:.2rem .5rem; font-size:.75rem; font-weight:600; }
+.stock-ok { color:#166534; background:#dcfce7; } .stock-low { color:#92400e; background:#fef3c7; } .stock-critical { color:#991b1b; background:#fee2e2; }
+</style>
 </head>
-<body>
+<body class="admin-page">
 
-<nav class="navbar navbar-expand-lg navbar-institucional py-3">
+<nav class="navbar navbar-expand-lg navbar-institucional">
   <div class="container">
     <a class="navbar-brand" href="index.html">
       <span data-i18n="nav_brand">Suministros Institucionales</span>
@@ -28,7 +37,7 @@
   </div>
 </nav>
 
-<header class="hero py-5 text-center"
+<header class="admin-hero py-3 text-center"
         style="background: linear-gradient(to bottom, rgb(52, 27, 139) 0%, rgb(0, 0, 0) 100%);
                color: var(--paper-50);">
   <div class="container  d-flex flex-column align-items-center text-center">
@@ -43,9 +52,14 @@
   <div class="mb-4 d-flex flex-wrap gap-2 align-items-center justify-content-between">
     <div class="d-flex flex-wrap gap-2 align-items-center">
       <input type="hidden" id="apiBase" value="http://localhost:8081">
-      <button class="btn btn-sm btn-dark" onclick="cargarProductos()">Cargar productos</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="cargarProductos()">Actualizar</button>
+      <div class="filter-chips" role="group" aria-label="Filtrar productos">
+        <button type="button" class="filter-chip active" data-filtro="todos">Ver todos</button>
+        <button type="button" class="filter-chip" data-filtro="activos">Activos</button>
+        <button type="button" class="filter-chip" data-filtro="bajo">Inventario bajo <span class="small">(&le; 5)</span></button>
+      </div>
     </div>
-    <button class="btn btn-sm" style="background:var(--brass-600); color:#fff;" onclick="abrirModalNuevoProducto()">+ Nuevo producto</button>
+    <button class="btn btn-sm btn-nuevo-producto" onclick="abrirModalNuevoProducto()">+ Nuevo producto</button>
   </div>
 
   <div id="estado" class="none"></div>
@@ -80,7 +94,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <form id="formProducto" onsubmit="return false;">
+        <form id="formProducto" enctype="multipart/form-data" onsubmit="return false;">
           <input type="hidden" id="productoId" value="">
           <div class="mb-3">
             <label class="form-label small">Nombre</label>
@@ -91,9 +105,13 @@
             <textarea class="form-control" id="productoDescripcion" rows="2"></textarea>
           </div>
           <div class="mb-3">
-            <label class="form-label small">Imagen (URL)</label>
-            <input type="url" class="form-control" id="productoImagen" placeholder="https://... (opcional — si se deja vacío se genera una imagen automática)">
-            <div class="form-text">Si no colocas una URL, el catálogo muestra una imagen generada automáticamente para este producto.</div>
+            <label class="form-label small">Imagen del producto</label>
+            <div class="upload-zone" id="productoImagenDrop">
+              <input type="file" class="visually-hidden" id="productoImagen" accept="image/jpeg,image/png,image/webp,image/gif">
+              <span class="upload-zone-label">Arrastra una imagen aqui o <button type="button" class="btn btn-link p-0 align-baseline" id="productoImagenPicker">selecciona un archivo</button></span>
+              <span class="upload-zone-name" id="productoImagenNombre">Ningun archivo seleccionado</span>
+            </div>
+            <div class="form-text">JPG, PNG, WEBP o GIF. Maximo 5 MB. En edicion, omitir conserva la imagen actual.</div>
           </div>
           <div class="row">
             <div class="col-md-6 mb-3">
@@ -246,8 +264,16 @@ function authHeaders(sesion, extra) {
   return Object.assign({ Authorization: 'Bearer ' + sesion.token }, extra || {});
 }
 
+async function apiFetch(sesion, url, opciones) {
+  const resp = await fetch(url, Object.assign({}, opciones || {}, { headers: authHeaders(sesion, (opciones || {}).headers) }));
+  if (resp.status === 401) { window.location.href = 'login.html?redirect=admin-productos.html'; throw new Error('Sesion expirada'); }
+  return resp;
+}
+
 let productosCache = [];
 let categoriasCache = [];
+let filtroActivo = 'todos';
+let imagenSeleccionada = null;
 
 async function cargarCategoriasSelect() {
   try {
@@ -266,45 +292,48 @@ function nombreCategoria(id) {
   return c ? c.nombre : '';
 }
 
-async function cargarProductos() {
-  const sesion = exigirSesion();
-  if (!sesion) return;
-
-  const base = apiBaseUrl();
-  const estado = document.getElementById('estado');
+function productoFiltrado(p) {
+  if (filtroActivo === 'activos') return p.estado === 'activo';
+  if (filtroActivo === 'bajo') return Number(p.cantidad_disponible) <= 5;
+  return true;
+}
+function estadoStock(valor) {
+  const n = Number(valor) || 0;
+  if (n === 0) return ['stock-critical', 'Agotado'];
+  if (n <= 5) return ['stock-low', 'Bajo'];
+  return ['stock-ok', 'Disponible'];
+}
+function renderProductos() {
   const tbody = document.getElementById('tbodyProductos');
+  const productos = productosCache.filter(productoFiltrado);
+  if (!productos.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5"><div class="fw-semibold">No hay productos en esta vista</div><div class="text-muted small">Prueba otro filtro o crea un producto nuevo.</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = productos.map(p => {
+    const stock = estadoStock(p.cantidad_disponible);
+    return `<tr>
+      <td><img src="${imgProducto(p)}" alt="" style="width:44px;height:34px;object-fit:cover;border-radius:4px;"></td>
+      <td class="text-muted">${escapeHtml(p.id)}</td><td>${escapeHtml(p.nombre)}</td>
+      <td>${escapeHtml(nombreCategoria(p.categoria_id))}</td><td>${formatearPrecio(p.precio)}</td>
+      <td><span class="stock-badge ${stock[0]}">${escapeHtml(p.cantidad_disponible)} ? ${stock[1]}</span></td>
+      <td>${escapeHtml(p.estado)}</td><td>${(p.restringido === 1 || p.restringido === true) ? 'S?' : 'No'}</td>
+      <td class="text-nowrap"><button class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarProducto(${JSON.stringify(p.id)})">Editar</button>
+      <button class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${JSON.stringify(p.id)})">Eliminar</button></td>
+    </tr>`;
+  }).join('');
+}
+async function cargarProductos() {
+  const sesion = exigirSesion(); if (!sesion) return;
+  const estado = document.getElementById('estado');
   try {
     if (!categoriasCache.length) await cargarCategoriasSelect();
-
-    const resp = await fetch(base + '/api/productos');
+    const resp = await apiFetch(sesion, apiBaseUrl() + '/api/productos?incluir_inactivos=1');
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const productos = await resp.json();
-    productosCache = productos;
-
-    if (!productos.length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Aún no hay productos registrados.</td></tr>';
-    } else {
-      tbody.innerHTML = productos.map(p => `
-        <tr>
-          <td><img src="${imgProducto(p)}" alt="" style="width:44px;height:34px;object-fit:cover;border-radius:4px;"></td>
-          <td class="text-muted">${escapeHtml(p.id)}</td>
-          <td>${escapeHtml(p.nombre)}</td>
-          <td>${escapeHtml(nombreCategoria(p.categoria_id))}</td>
-          <td>${formatearPrecio(p.precio)}</td>
-          <td>${escapeHtml(p.cantidad_disponible)}</td>
-          <td>${escapeHtml(p.estado)}</td>
-          <td>${(p.restringido === 1 || p.restringido === true) ? 'Sí' : 'No'}</td>
-          <td class="text-nowrap">
-            <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarProducto(${JSON.stringify(p.id)})">Editar</button>
-            <button class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${JSON.stringify(p.id)})">Eliminar</button>
-          </td>
-        </tr>`).join('');
-    }
-    
+    productosCache = await resp.json(); renderProductos();
   } catch (err) {
-    estado.textContent = '';
-    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Sin datos disponibles temporalmente.</td></tr>';
-    mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...', 'error');
+    estado.textContent = ''; document.getElementById('tbodyProductos').innerHTML = '<tr><td colspan="9" class="text-center text-muted py-5">No se pudieron cargar los productos. Int?ntalo de nuevo.</td></tr>';
+    mostrarNotificacion('No se pudo conectar con el servidor de productos.', 'error');
   }
 }
 
@@ -313,6 +342,8 @@ function limpiarFormProducto() {
   document.getElementById('productoNombre').value = '';
   document.getElementById('productoDescripcion').value = '';
   document.getElementById('productoImagen').value = '';
+  imagenSeleccionada = null;
+  document.getElementById('productoImagenNombre').textContent = 'Ningun archivo seleccionado';
   document.getElementById('productoPrecio').value = '';
   document.getElementById('productoCantidad').value = '0';
   document.getElementById('productoMacroCategoria').value = 'general';
@@ -380,7 +411,8 @@ async function abrirModalEditarProducto(productoId) {
   document.getElementById('productoId').value = p.id;
   document.getElementById('productoNombre').value = p.nombre ?? '';
   document.getElementById('productoDescripcion').value = p.descripcion ?? '';
-  document.getElementById('productoImagen').value = p.imagen ?? '';
+  document.getElementById('productoImagen').value = '';
+  document.getElementById('productoImagenNombre').textContent = p.imagen ? 'Imagen actual conservada (elige otra para reemplazar)' : 'Ningun archivo seleccionado';
   document.getElementById('productoCategoria').value = p.categoria_id ?? '';
   document.getElementById('productoPrecio').value = p.precio ?? '';
   document.getElementById('productoCantidad').value = p.cantidad_disponible ?? 0;
@@ -420,7 +452,7 @@ async function guardarProducto() {
   const payload = {
     nombre: document.getElementById('productoNombre').value.trim(),
     descripcion: document.getElementById('productoDescripcion').value.trim(),
-    imagen: document.getElementById('productoImagen').value.trim() || null,
+    imagen: null,
     categoria_id: document.getElementById('productoCategoria').value || null,
     macrocategoria: document.getElementById('productoMacroCategoria').value || 'general',
     precio: Number(document.getElementById('productoPrecio').value),
@@ -446,11 +478,10 @@ async function guardarProducto() {
   btn.textContent = 'Guardando...';
 
   try {
-    const resp = await fetch(url, {
-      method: metodo,
-      headers: authHeaders(sesion, { 'Content-Type': 'application/json' }),
-      body: JSON.stringify(payload)
-    });
+    const datos = new FormData();
+    Object.entries(payload).forEach(([clave, valor]) => datos.append(clave, typeof valor === 'object' ? JSON.stringify(valor) : valor ?? ''));
+    if (imagenSeleccionada) datos.append('imagen', imagenSeleccionada);
+    const resp = await apiFetch(sesion, url, { method: metodo, body: datos });
     if (resp.status === 401) {
       window.location.href = 'login.html?redirect=admin-productos.html';
       return;
@@ -466,8 +497,11 @@ async function guardarProducto() {
     bootstrap.Modal.getInstance(document.getElementById('modalProductoForm')).hide();
     await cargarProductos();
   } catch (err) {
-    errEl.textContent = 'No se pudo guardar el producto (' + err.message + ').';
+    errEl.textContent = 'No se pudo guardar el producto.';
     errEl.style.display = 'block';
+    mostrarNotificacion(err instanceof TypeError
+      ? 'Portal temporalmente fuera de línea. Reconectando con el servidor central...'
+      : 'No se pudo guardar el producto. Revisa los datos e inténtalo de nuevo.', 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Guardar';
@@ -484,7 +518,7 @@ async function eliminarProducto(productoId) {
 
   const estado = document.getElementById('estado');
   try {
-    const resp = await fetch(apiBaseUrl() + '/api/productos/' + encodeURIComponent(productoId), {
+    const resp = await apiFetch(sesion, apiBaseUrl() + '/api/productos/' + encodeURIComponent(productoId), {
       method: 'DELETE',
       headers: authHeaders(sesion)
     });
@@ -509,6 +543,28 @@ document.querySelectorAll('.talla-option').forEach(btn => {
     btn.classList.toggle('btn-outline-secondary', !btn.classList.contains('active'));
   });
 });
+
+document.querySelectorAll('[data-filtro]').forEach(btn => btn.addEventListener('click', () => {
+  filtroActivo = btn.dataset.filtro;
+  document.querySelectorAll('[data-filtro]').forEach(x => x.classList.toggle('active', x === btn));
+  renderProductos();
+}));
+const imagenInput = document.getElementById('productoImagen');
+const imagenDrop = document.getElementById('productoImagenDrop');
+function seleccionarImagen(file) {
+  if (!file) return;
+  if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type) || file.size > 5 * 1024 * 1024) {
+    mostrarNotificacion('Selecciona una imagen JPG, PNG, WEBP o GIF de maximo 5 MB.', 'error'); return;
+  }
+  imagenSeleccionada = file;
+  document.getElementById('productoImagenNombre').textContent = file.name;
+}
+imagenInput.addEventListener('change', () => seleccionarImagen(imagenInput.files[0]));
+document.getElementById('productoImagenPicker').addEventListener('click', e => { e.stopPropagation(); imagenInput.click(); });
+imagenDrop.addEventListener('click', () => imagenInput.click());
+['dragenter','dragover'].forEach(evt => imagenDrop.addEventListener(evt, e => { e.preventDefault(); imagenDrop.classList.add('is-dragging'); }));
+['dragleave','drop'].forEach(evt => imagenDrop.addEventListener(evt, e => { e.preventDefault(); imagenDrop.classList.remove('is-dragging'); }));
+imagenDrop.addEventListener('drop', e => seleccionarImagen(e.dataTransfer.files[0]));
 
 document.addEventListener('DOMContentLoaded', () => {
   alternarCamposPorMacro();

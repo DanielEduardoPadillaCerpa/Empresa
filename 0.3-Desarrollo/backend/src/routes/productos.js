@@ -1,4 +1,7 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 const router = express.Router();
 const { pool } = require('../db');
 const { requiereAutenticacion, requiereAdmin } = require('./auth');
@@ -7,9 +10,47 @@ const { registrarAuditoria } = require('../auditoria');
 // Umbral por defecto para considerar "inventario bajo" (configurable por .env)
 const STOCK_MINIMO = Number(process.env.STOCK_MINIMO || 10);
 
+const IMAGENES_DIR = path.join(__dirname, '../../img/productos');
+const TIPOS_IMAGEN = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+async function leerMultipart(req) {
+  if (!String(req.headers['content-type'] || '').startsWith('multipart/form-data')) return;
+  const match = req.headers['content-type'].match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+  if (!match) throw Object.assign(new Error('Formulario multipart invalido'), { status: 400 });
+  const chunks = []; let total = 0;
+  for await (const chunk of req) { total += chunk.length; if (total > 6 * 1024 * 1024) throw Object.assign(new Error('Archivo demasiado grande'), { status: 413 }); chunks.push(chunk); }
+  const body = Buffer.concat(chunks); const boundary = Buffer.from('--' + (match[1] || match[2]));
+  const campos = {}; let archivo = null;
+  for (const parte of splitBuffer(body, boundary).slice(1)) {
+    const fin = parte.indexOf(Buffer.from('\r\n\r\n')); if (fin < 0) continue;
+    const cabeceras = parte.subarray(0, fin).toString('utf8');
+    let contenido = parte.subarray(fin + 4); if (contenido.subarray(-2).toString() === '\r\n') contenido = contenido.subarray(0, -2);
+    const nombre = (cabeceras.match(/name="([^"]+)"/) || [])[1]; if (!nombre) continue;
+    const nombreArchivo = (cabeceras.match(/filename="([^"]*)"/) || [])[1];
+    if (!nombreArchivo) { campos[nombre] = contenido.toString('utf8'); continue; }
+    const tipo = (cabeceras.match(/Content-Type:\s*([^\r\n]+)/i) || [])[1] || '';
+    if (!TIPOS_IMAGEN.has(tipo) || contenido.length > 5 * 1024 * 1024) throw Object.assign(new Error('Imagen no valida. Usa JPG, PNG, WEBP o GIF de maximo 5 MB.'), { status: 400 });
+    await fs.promises.mkdir(IMAGENES_DIR, { recursive: true });
+    const ext = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' }[tipo];
+    const nombreSeguro = crypto.randomBytes(12).toString('hex') + ext;
+    await fs.promises.writeFile(path.join(IMAGENES_DIR, nombreSeguro), contenido);
+    archivo = '/img/productos/' + nombreSeguro;
+  }
+  req.body = campos; if (archivo) req.fileImagePath = archivo;
+}
+function splitBuffer(buffer, separator) {
+  const partes = []; let inicio = 0; let posicion;
+  while ((posicion = buffer.indexOf(separator, inicio)) !== -1) { partes.push(buffer.subarray(inicio, posicion)); inicio = posicion + separator.length; }
+  partes.push(buffer.subarray(inicio)); return partes;
+}
+function incluirInactivosSiAdmin(req, res, next) {
+  if (req.query.incluir_inactivos !== '1') return next();
+  return requiereAutenticacion(req, res, () => requiereAdmin(req, res, next));
+}
+
+
 // GET /api/productos -> catálogo público (solo productos activos)
 // Admite ?categoria_id= para filtrar y ?incluir_inactivos=1 (solo admin) para gestión.
-router.get('/', async (req, res) => {
+router.get('/', incluirInactivosSiAdmin, async (req, res) => {
   try {
     const categoriaId = req.query.categoria_id;
     const incluirInactivos = req.query.incluir_inactivos === '1';
@@ -79,14 +120,18 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/productos -> crear producto (solo admin)
 router.post('/', requiereAutenticacion, requiereAdmin, async (req, res) => {
+  try { await leerMultipart(req); } catch (err) { return res.status(err.status || 400).json({ error: err.message }); }
   try {
-    const { nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id, macrocategoria, metadatos } = req.body;
+    const { nombre, descripcion, precio, imagen: imagenRecibida, cantidad_disponible, estado, restringido, categoria_id, macrocategoria, metadatos } = req.body;
+    const imagen = req.fileImagePath || imagenRecibida;
 
     if (!nombre || precio === undefined || precio === null) {
       return res.status(400).json({ error: 'Nombre y precio son obligatorios' });
     }
 
-    const metadatosJson = metadatos && typeof metadatos === 'object' ? JSON.stringify(metadatos) : null;
+    let metadatosObjeto = metadatos;
+    if (typeof metadatos === 'string') { try { metadatosObjeto = JSON.parse(metadatos); } catch (err) { metadatosObjeto = null; } }
+    const metadatosJson = metadatosObjeto && typeof metadatosObjeto === 'object' ? JSON.stringify(metadatosObjeto) : null;
 
     const [resultado] = await pool.query(
       `INSERT INTO productos (nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id, macrocategoria, metadatos)
@@ -122,13 +167,17 @@ router.post('/', requiereAutenticacion, requiereAdmin, async (req, res) => {
 
 // PUT /api/productos/:id -> editar producto (solo admin)
 router.put('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
+  try { await leerMultipart(req); } catch (err) { return res.status(err.status || 400).json({ error: err.message }); }
   try {
-    const { nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id, macrocategoria, metadatos } = req.body;
+    const { nombre, descripcion, precio, imagen: imagenRecibida, cantidad_disponible, estado, restringido, categoria_id, macrocategoria, metadatos } = req.body;
+    const imagen = req.fileImagePath || imagenRecibida;
 
     const [existente] = await pool.query('SELECT id FROM productos WHERE id = ?', [req.params.id]);
     if (!existente.length) return res.status(404).json({ error: 'Producto no encontrado' });
 
-    const metadatosJson = metadatos && typeof metadatos === 'object' ? JSON.stringify(metadatos) : null;
+    let metadatosObjeto = metadatos;
+    if (typeof metadatos === 'string') { try { metadatosObjeto = JSON.parse(metadatos); } catch (err) { metadatosObjeto = null; } }
+    const metadatosJson = metadatosObjeto && typeof metadatosObjeto === 'object' ? JSON.stringify(metadatosObjeto) : null;
 
     await pool.query(
       `UPDATE productos SET
