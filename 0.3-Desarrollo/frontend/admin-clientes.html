@@ -61,8 +61,13 @@
       <input type="hidden" id="apiBase" value="http://localhost:8081">
       <button class="btn btn-sm btn-outline-secondary" onclick="cargarClientes()" data-i18n="admin_clients_load_btn">Actualizar clientes</button>
     </div>
-    <button class="btn btn-sm btn-nuevo-cliente" onclick="abrirModalNuevoCliente()" data-i18n="admin_clients_new_btn">+ Nuevo cliente</button>
-  </div>
+    <button class="btn btn-sm btn-nuevo-cliente"
+        onclick="abrirRegistroCliente()"
+          data-i18n="admin_clients_new_btn">
+      + Nuevo cliente
+    </button>
+
+    </div>
 
   <div id="estado" class="d-none"></div>
   <div id="clientesB2B" class="clientes-seccion">
@@ -299,9 +304,7 @@ function limpiarFormCliente() {
 
 function abrirModalNuevoCliente() {
   if (!exigirSesion()) return;
-  limpiarFormCliente();
-  document.getElementById('modalClienteFormTitulo').textContent = 'Nuevo cliente';
-  new bootstrap.Modal(document.getElementById('modalClienteForm')).show();
+  abrirRegistroCliente();
 }
 
 function abrirModalEditarCliente(clienteId) {
@@ -311,15 +314,18 @@ function abrirModalEditarCliente(clienteId) {
     mostrarNotificacion(textoI18n('admin_clients_not_found', 'No se encontró el cliente en la lista cargada. Vuelve a cargar clientes e inténtalo de nuevo.'), 'error');
     return;
   }
-  limpiarFormCliente();
-  document.getElementById('clienteId').value = c.id;
-  document.getElementById('clienteNombreUnidad').value = c.nombreUnidad ?? '';
-  document.getElementById('clienteNit').value = c.nit ?? '';
-  document.getElementById('clienteNombreFuncionario').value = c.nombreFuncionario ?? '';
-  document.getElementById('clienteCorreo').value = c.correo ?? '';
-  document.getElementById('clienteTelefono').value = c.telefono ?? '';
-  document.getElementById('modalClienteFormTitulo').textContent = 'Editar cliente';
-  new bootstrap.Modal(document.getElementById('modalClienteForm')).show();
+  abrirRegistroCliente(c.id);
+}
+
+function abrirRegistroCliente(clienteId) {
+  const sesion = exigirSesion();
+  if (!sesion) return;
+  const destino = new URL('registro.html', window.location.href);
+  destino.searchParams.set('modo', 'admin');
+  if (clienteId !== undefined && clienteId !== null) {
+    destino.searchParams.set('id', String(clienteId));
+  }
+  window.location.href = destino.href;
 }
 
 async function guardarCliente() {

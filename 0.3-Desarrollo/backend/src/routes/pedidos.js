@@ -12,6 +12,7 @@ function parsearItems(items) {
 
 // POST /api/pedidos -> registrar un pedido (cliente)
 router.post('/', requiereAutenticacion, async (req, res) => {
+  let connection;
   try {
     const clienteId = req.usuario.clienteId;
     if (!clienteId) {
@@ -22,44 +23,61 @@ router.post('/', requiereAutenticacion, async (req, res) => {
     if (!items || !Array.isArray(items) || !items.length) {
       return res.status(400).json({ error: 'Datos de pedido inválidos' });
     }
+    const cantidadesPorProducto = new Map();
     for (const item of items) {
-      if (!item.id) {
+      const productId = Number(item.id);
+      const cantidad = Number(item.cantidad);
+      if (!Number.isSafeInteger(productId) || productId <= 0 || !Number.isSafeInteger(cantidad) || cantidad <= 0) {
         return res.status(400).json({ error: `El producto "${item.nombre || '?'}" no tiene un ID válido` });
       }
+      cantidadesPorProducto.set(productId, (cantidadesPorProducto.get(productId) || 0) + cantidad);
     }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
 
     // Trae el estado real de cada producto desde la base de datos — nunca
     // se confía en lo que el navegador diga sobre precio, stock o si el
     // producto es restringido, porque el carrito viaja en localStorage y
     // se puede manipular.
-    const [clienteFilas] = await pool.query(
+    const [clienteFilas] = await connection.query(
       'SELECT autorizacion_general FROM clientes WHERE id = ?',
       [clienteId]
     );
     if (!clienteFilas.length) {
+      await connection.rollback();
       return res.status(400).json({ error: 'No se encontró el cliente asociado a tu cuenta.' });
     }
     const clienteAutorizado = !!clienteFilas[0].autorizacion_general;
 
     let hayRestringido = false;
     const itemsCanonicos = [];
-    for (const item of items) {
-      const [producto] = await pool.query(
-        'SELECT id, nombre, precio, cantidad_disponible, restringido, estado FROM productos WHERE id=?',
-        [item.id]
+    const productosPorId = new Map();
+    const productosSolicitados = [...cantidadesPorProducto.entries()].sort(([idA], [idB]) => idA - idB);
+    for (const [productId, cantidad] of productosSolicitados) {
+      const [producto] = await connection.query(
+        'SELECT id, nombre, precio, cantidad_disponible, restringido, estado FROM productos WHERE id=? FOR UPDATE',
+        [productId]
       );
       if (!producto.length || producto[0].estado !== 'activo') {
-        return res.status(404).json({ error: `Producto ${item.id} no encontrado o no disponible` });
+        await connection.rollback();
+        return res.status(404).json({ error: `Producto ${productId} no encontrado o no disponible` });
       }
-      if (item.cantidad > producto[0].cantidad_disponible) {
-        return res.status(400).json({ error: `No hay suficiente inventario para ${item.nombre}` });
+      if (cantidad > Number(producto[0].cantidad_disponible)) {
+        await connection.rollback();
+        return res.status(400).json({ error: `No hay suficiente inventario para ${producto[0].nombre}` });
       }
+      productosPorId.set(productId, producto[0]);
       if (producto[0].restringido) hayRestringido = true;
+    }
+
+    for (const item of items) {
+      const producto = productosPorId.get(Number(item.id));
       itemsCanonicos.push({
-        id: producto[0].id,
-        nombre: producto[0].nombre,
+        id: producto.id,
+        nombre: producto.nombre,
         cantidad: Number(item.cantidad),
-        precio: Number(producto[0].precio),
+        precio: Number(producto.precio),
         ...(item.variacion ? { variacion: String(item.variacion) } : {})
       });
     }
@@ -67,6 +85,7 @@ router.post('/', requiereAutenticacion, async (req, res) => {
     // Equipo restringido: exige que el cliente tenga la autorización general
     // registrada (verificación de antecedentes) antes de permitir la compra.
     if (hayRestringido && !clienteAutorizado) {
+      await connection.rollback();
       return res.status(403).json({
         error: 'Tu pedido incluye equipo restringido. Para completarlo, tu cuenta debe tener registrada la autorización/verificación de antecedentes. Actualiza tu registro o contacta al administrador.'
       });
@@ -76,27 +95,33 @@ router.post('/', requiereAutenticacion, async (req, res) => {
     const total = itemsCanonicos.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
 
     // Registrar pedido
-    const [resultado] = await pool.query(
+    const [resultado] = await connection.query(
       'INSERT INTO pedidos (cliente_id, items, total, estado) VALUES (?, ?, ?, ?)',
       [clienteId, JSON.stringify(itemsCanonicos), total, 'pendiente']
     );
 
     // Registrar el detalle (línea por producto) y descontar inventario
     for (const item of itemsCanonicos) {
-      await pool.query(
+      await connection.query(
         'INSERT INTO detalle_pedido (pedido_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)',
         [resultado.insertId, item.id, item.cantidad, item.precio]
       );
-      await pool.query(
+    }
+    for (const [productId, cantidad] of productosSolicitados) {
+      await connection.query(
         'UPDATE productos SET cantidad_disponible = cantidad_disponible - ? WHERE id=?',
-        [item.cantidad, item.id]
+        [cantidad, productId]
       );
     }
 
+    await connection.commit();
     res.status(201).json({ id: resultado.insertId, total });
   } catch (err) {
+    if (connection) await connection.rollback();
     console.error(err);
     res.status(500).json({ error: 'Error registrando pedido' });
+  } finally {
+    if (connection) connection.release();
   }
 });
 

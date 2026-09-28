@@ -82,13 +82,17 @@ function mostrarMensaje(texto, tipo) {
   mensaje.style.display = 'block';
 }
 
-// Si ya está logueado, no tiene sentido quedarse en esta página
-if (authEstaLogueado()) {
+// Solo redirigir si la sesión sigue vigente o pudo renovarse.
+async function redirigirSesionActiva() {
+  if (!authEstaLogueado()) return;
+  const tokenValido = await authAsegurarTokenValido();
+  if (!tokenValido) return;
   const params = new URLSearchParams(window.location.search);
   const sesionActual = authLeer();
   const destinoPorRol = sesionActual?.rol === 'admin' ? 'admin-dashboard.html' : 'index.html';
-  window.location.href = params.get('redirect') || destinoPorRol;
+  window.location.replace(params.get('redirect') || destinoPorRol);
 }
+redirigirSesionActiva();
 
 form.addEventListener('submit', async function (e) {
   e.preventDefault();
@@ -112,7 +116,7 @@ form.addEventListener('submit', async function (e) {
       body: JSON.stringify({ correo, password, captchaHumano })
     });
     const datos = await resp.json();
-    if (!resp.ok) throw new Error(datos.error || 'No se pudo iniciar sesión');
+    if (!resp.ok) throw new Error('LOGIN_REJECTED');
 
     authGuardar(datos);
 
@@ -122,7 +126,10 @@ form.addEventListener('submit', async function (e) {
     const destinoPorRol = datos?.rol === 'admin' ? 'admin-dashboard.html' : 'index.html';
     window.location.href = params.get('redirect') || destinoPorRol;
   } catch (err) {
-    mostrarMensaje(err.message, 'danger');
+    const mensajeSeguro = err.name === 'TypeError'
+      ? 'No fue posible conectar con el servicio de acceso. Intenta de nuevo en unos minutos.'
+      : 'No se pudo validar el acceso. Verifica tus datos e inténtalo nuevamente.';
+    mostrarMensaje(mensajeSeguro, 'danger');
     btn.disabled = false;
     aplicarIdioma(idiomaGuardado());
   }

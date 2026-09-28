@@ -5,8 +5,8 @@ const { cifrar, descifrar } = require('../crypto');
 const { requiereAutenticacion, requiereAdmin } = require('./auth');
 const { registrarAuditoria } = require('../auditoria');
 
-// GET /api/clientes -> lista todos los clientes (descifrados)
-router.get('/', async (req, res) => {
+// Datos personales descifrados disponibles únicamente para administradores.
+router.get('/', requiereAutenticacion, requiereAdmin, async (req, res) => {
   try {
     const [filas] = await pool.query('SELECT * FROM clientes ORDER BY fecha_registro DESC');
     const clientes = filas.map(c => ({
@@ -28,8 +28,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/clientes/:id
-router.get('/:id', async (req, res) => {
+router.get('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
   try {
     const [filas] = await pool.query('SELECT * FROM clientes WHERE id = ?', [req.params.id]);
     if (!filas.length) return res.status(404).json({ error: 'Cliente no encontrado' });
@@ -99,7 +98,7 @@ router.post('/', async (req, res) => {
 // PUT /api/clientes/:id -> editar cliente (solo admin) — usado por admin-clientes.html
 router.put('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
   try {
-    const { nombreUnidad, nit, nombreFuncionario, correo, telefono, direccionInstalacion, direccionEntrega } = req.body;
+    const { nombreUnidad, nit, nombreFuncionario, correo, telefono, direccionInstalacion, direccionEntrega, autorizacionGeneral } = req.body;
 
     const [existente] = await pool.query('SELECT id FROM clientes WHERE id = ?', [req.params.id]);
     if (!existente.length) return res.status(404).json({ error: 'Cliente no encontrado' });
@@ -111,6 +110,7 @@ router.put('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
          nombre_funcionario = ?,
          correo = ?,
          telefono = ?,
+         autorizacion_general = COALESCE(?, autorizacion_general),
          direccion_instalacion = COALESCE(?, direccion_instalacion),
          direccion_entrega = COALESCE(?, direccion_entrega)
        WHERE id = ?`,
@@ -120,6 +120,7 @@ router.put('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
         cifrar(nombreFuncionario),
         cifrar(correo),
         cifrar(telefono),
+        autorizacionGeneral === undefined ? null : !!autorizacionGeneral,
         direccionInstalacion || null,
         direccionEntrega ? cifrar(direccionEntrega) : null,
         req.params.id,

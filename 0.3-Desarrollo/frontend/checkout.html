@@ -737,32 +737,59 @@ function validarMetodoEmpresa() {
   return true;
 }
 
-function simularPasarela(metodo) {
-  return new Promise(resolve => {
-    const r = Math.random();
-    setTimeout(() => {
-      if      (r < 0.90) resolve({ estado: 'aprobado',  ref: 'REF-' + Date.now() });
-      else if (r < 0.95) resolve({ estado: 'rechazado', ref: null });
-      else               resolve({ estado: 'pendiente', ref: 'PND-' + Date.now() });
-    }, 2200);
+function obtenerDatosComprador() {
+  return tipoComprador === 'natural' ? {
+    rutNit: document.getElementById('rutNitNat').value.trim(),
+    nombre: document.getElementById('nombreCompletoNat').value.trim(),
+    telefono: document.getElementById('telefonoContactoNat').value.trim()
+  } : {
+    razonSocial: document.getElementById('empresaRazonSocial').value.trim(),
+    nit: document.getElementById('empresaNit').value.trim(),
+    nombreComprador: document.getElementById('empresaComprador').value.trim(),
+    telefonoTrabajo: document.getElementById('empresaTelefono').value.trim(),
+    ordenCompra: document.getElementById('empresaVincularPO').checked
+      ? document.getElementById('empresaPoNumero').value.trim()
+      : null
+  };
+}
+
+function prepararLineaPedido(item) {
+  const partesId = String(item.id).split('-');
+  return {
+    id: Number(item.productoId || partesId[0]),
+    cantidad: item.cantidad,
+    variacion: item.variacion || partesId.slice(1).join('-') || undefined
+  };
+}
+
+async function simularPasarela(metodo, direccion, sesion) {
+  const resp = await fetch(API_BASE + '/api/pagos/procesar', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + sesion.token
+    },
+    body: JSON.stringify({
+      metodo,
+      importe: items.reduce((s, i) => s + i.precio * i.cantidad, 0),
+      tipoComprador,
+      datosComprador: obtenerDatosComprador(),
+      direccionEntrega: direccion,
+      items: items.map(prepararLineaPedido)
+    })
   });
+  const resultado = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    throw new Error(resultado.error || 'No fue posible verificar el pago.');
+  }
+  return {
+    estado: resultado.estado,
+    ref: resultado.referencia,
+    mensaje: resultado.mensaje
+  };
 }
 
 async function registrarPedido(sesion, direccion, metodo, referencia) {
-  const datosComprador = tipoComprador === 'natural' ? {
-    rutNit:   document.getElementById('rutNitNat').value.trim(),
-    nombre:   document.getElementById('nombreCompletoNat').value.trim(),
-    telefono: document.getElementById('telefonoContactoNat').value.trim()
-  } : {
-    razonSocial:     document.getElementById('empresaRazonSocial').value.trim(),
-    nit:             document.getElementById('empresaNit').value.trim(),
-    nombreComprador: document.getElementById('empresaComprador').value.trim(),
-    telefonoTrabajo: document.getElementById('empresaTelefono').value.trim(),
-    ordenCompra:     document.getElementById('empresaVincularPO').checked
-                       ? document.getElementById('empresaPoNumero').value.trim()
-                       : null
-  };
-
   try {
     const resp = await fetch(API_BASE + '/api/pedidos', {
       method: 'POST',
@@ -772,16 +799,17 @@ async function registrarPedido(sesion, direccion, metodo, referencia) {
       },
       body: JSON.stringify({
         items: items.map(i => ({
-          id: i.id,
+          id: prepararLineaPedido(i).id,
           nombre:     i.nombre,
           cantidad:   i.cantidad,
-          precio:     i.precio
+          precio:     i.precio,
+          variacion:  prepararLineaPedido(i).variacion
         })),
         direccionEntrega: direccion,
         metodoPago:       metodo,
         referenciaPago:   referencia,
         tipoComprador:    tipoComprador,
-        datosComprador:   datosComprador,
+        datosComprador:   obtenerDatosComprador(),
         total: items.reduce((s, i) => s + i.precio * i.cantidad, 0)
       })
     });
@@ -819,10 +847,8 @@ async function procesarPago() {
 
   try {
     mostrarOverlay('Conectando con ' + metodo + '...', 'Verificando disponibilidad de productos');
-    await new Promise(r => setTimeout(r, 700));
-
     mostrarOverlay('Procesando pago con ' + metodo + '...', 'No cierres ni recargues esta ventana');
-    const resultado = await simularPasarela(metodo);
+    const resultado = await simularPasarela(metodo, direccion, sesion);
 
     ocultarOverlay();
 
@@ -913,7 +939,7 @@ async function procesarPago() {
 
   } catch (err) {
     ocultarOverlay();
-    mostrarError('Error inesperado: ' + err.message + '. Intenta de nuevo.');
+    mostrarError(err.message || 'No fue posible verificar el pago. No se ha confirmado la transacción.');
     btnNat.disabled = false;
     btnEmp.disabled = false;
   }

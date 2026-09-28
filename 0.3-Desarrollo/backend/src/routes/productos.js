@@ -9,6 +9,12 @@ const { registrarAuditoria } = require('../auditoria');
 
 // Umbral por defecto para considerar "inventario bajo" (configurable por .env)
 const STOCK_MINIMO = Number(process.env.STOCK_MINIMO || 10);
+const CATALOGO_CACHE_MS = 5_000;
+const catalogoCache = new Map();
+
+function invalidarCacheCatalogo() {
+  catalogoCache.clear();
+}
 
 const IMAGENES_DIR = path.join(__dirname, '../../img/productos');
 const TIPOS_IMAGEN = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -54,6 +60,11 @@ router.get('/', incluirInactivosSiAdmin, async (req, res) => {
   try {
     const categoriaId = req.query.categoria_id;
     const incluirInactivos = req.query.incluir_inactivos === '1';
+    const cacheKey = String(categoriaId || 'todos');
+    const cacheEntry = incluirInactivos ? null : catalogoCache.get(cacheKey);
+    if (cacheEntry && cacheEntry.expiresAt > Date.now()) {
+      return res.json(cacheEntry.products);
+    }
 
     let sql = `
       SELECT id, nombre, descripcion, precio, imagen, cantidad_disponible, estado, restringido, categoria_id, macrocategoria, metadatos, fecha_creacion
@@ -75,6 +86,9 @@ router.get('/', incluirInactivosSiAdmin, async (req, res) => {
     sql += ' ORDER BY nombre ASC';
 
     const [filas] = await pool.query(sql, params);
+    if (!incluirInactivos) {
+      catalogoCache.set(cacheKey, { products: filas, expiresAt: Date.now() + CATALOGO_CACHE_MS });
+    }
     res.json(filas);
   } catch (err) {
     console.error(err);
@@ -149,6 +163,7 @@ router.post('/', requiereAutenticacion, requiereAdmin, async (req, res) => {
         metadatosJson,
       ]
     );
+    invalidarCacheCatalogo();
 
     await registrarAuditoria({
       usuario: req.usuario,
@@ -206,6 +221,7 @@ router.put('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
         req.params.id,
       ]
     );
+    invalidarCacheCatalogo();
 
     await registrarAuditoria({
       usuario: req.usuario,
@@ -239,6 +255,7 @@ router.delete('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => 
 
     if (total > 0) {
       await pool.query("UPDATE productos SET estado = 'inactivo' WHERE id = ?", [req.params.id]);
+      invalidarCacheCatalogo();
       await registrarAuditoria({
         usuario: req.usuario,
         accion: 'editar',
@@ -250,6 +267,7 @@ router.delete('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => 
     }
 
     await pool.query('DELETE FROM productos WHERE id = ?', [req.params.id]);
+    invalidarCacheCatalogo();
     await registrarAuditoria({
       usuario: req.usuario,
       accion: 'eliminar',

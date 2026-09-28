@@ -10,6 +10,7 @@
 const API_BASE = 'http://localhost:8081';
 
 const AUTH_KEY = 'si_auth';
+let authRenovacionEnCurso = null;
 
 function portalToastStack() {
   let stack = document.getElementById('portal-toast-stack');
@@ -94,6 +95,8 @@ function authRenderNavbar() {
   const slot = document.getElementById('auth-nav-slot');
   const sesion = authLeer();
   const logueado = !!sesion?.correo;
+  const esAdmin = !!(logueado && sesion?.rol === 'admin' &&
+    (!sesion.expiraEn || Number(sesion.expiraEn) > Date.now()));
 
   if (slot) {
     if (logueado) {
@@ -134,6 +137,67 @@ function authRenderNavbar() {
     el.style.display = logueado ? '' : 'none';
   });
 
+  if (esAdmin) {
+    document.querySelectorAll('.navbar a[href="admin-dashboard.html"]').forEach(el => {
+      el.textContent = '← Regresar al panel principal';
+    });
+    document.querySelectorAll('.navbar a[href="historial.html"]').forEach(el => {
+      el.textContent = 'Historial de clientes';
+      el.href = 'admin-pedidos.html';
+    });
+    document.querySelectorAll('.navbar a[href="mis-reportes.html"]').forEach(el => {
+      el.textContent = 'Reportes de clientes';
+      el.href = 'reportes.html';
+    });
+    document.querySelectorAll('.navbar a[href="registro.html"]').forEach(el => {
+      el.textContent = 'Nuevo cliente';
+      el.href = 'registro.html?modo=admin';
+    });
+    document.querySelectorAll('.nav-registro-link').forEach(el => {
+      el.style.display = '';
+    });
+
+    const navList = document.querySelector('.navbar .navbar-nav');
+    const esCatalogo = /(^|\/)index\.html$/.test(window.location.pathname) || window.location.pathname.endsWith('/');
+    if (esCatalogo && navList) {
+      const enlacesAdmin = [
+        ['admin-clientes.html', 'Clientes'],
+        ['admin-productos.html', 'Productos'],
+        ['admin-pedidos.html', 'Pedidos'],
+        ['reportes.html', 'Reportes']
+      ];
+      enlacesAdmin.forEach(([href, label]) => {
+        if (navList.querySelector(`a[href="${href}"]`)) return;
+        const li = document.createElement('li');
+        li.className = 'nav-item';
+        const link = document.createElement('a');
+        link.className = 'nav-link';
+        link.href = href;
+        link.textContent = label;
+        li.appendChild(link);
+        const authItem = navList.querySelector('#auth-nav-slot')?.parentElement;
+        navList.insertBefore(li, authItem || null);
+      });
+    }
+
+    const navbar = document.querySelector('.navbar .navbar-nav');
+    const tieneDashboard = navbar && Array.from(navbar.querySelectorAll('a'))
+      .some(link => link.getAttribute('href') === 'admin-dashboard.html');
+    const modoRegistroAdmin = document.body.classList.contains('modo-admin-registro');
+    const esDashboard = window.location.pathname.endsWith('admin-dashboard.html');
+    if (navbar && !tieneDashboard && !esDashboard && !modoRegistroAdmin && !document.getElementById('nav-regresar-admin-global')) {
+      const li = document.createElement('li');
+      li.className = 'nav-item';
+      const link = document.createElement('a');
+      link.id = 'nav-regresar-admin-global';
+      link.className = 'nav-link';
+      link.href = 'admin-dashboard.html';
+      link.textContent = '← Regresar al panel principal';
+      li.appendChild(link);
+      navbar.insertBefore(li, navbar.firstChild);
+    }
+  }
+
   // Inicializar tooltips de Bootstrap
   const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
   tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
@@ -158,33 +222,75 @@ function authRequerirParaComprar(destinoSiLogueado) {
 async function authAsegurarTokenValido() {
   const sesion = authLeer();
   if (!sesion?.token) return false;
+  if (authRenovacionEnCurso) return authRenovacionEnCurso;
 
-  const margenMs = 60 * 1000; // renueva si falta menos de 1 minuto para vencer
-  const vencidoOPorVencer = !sesion.expiraEn || (sesion.expiraEn - Date.now()) < margenMs;
+  let expiraEn = Number(sesion.expiraEn) || 0;
+  if (!expiraEn) {
+    try {
+      const payload = sesion.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      expiraEn = Number(JSON.parse(atob(payload)).exp) * 1000;
+    } catch {
+      expiraEn = 0;
+    }
+  }
+
+  const margenMs = 60 * 1000;
+  const vencidoOPorVencer = !expiraEn || (expiraEn - Date.now()) < margenMs;
 
   if (!vencidoOPorVencer) return true;
 
   if (!sesion.refreshToken) {
-    authCerrarSesion();
+    localStorage.removeItem(AUTH_KEY);
+    authRenderNavbar();
     return false;
   }
 
-  try {
-    const resp = await fetch(API_BASE + '/api/auth/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: sesion.refreshToken })
-    });
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) throw new Error(data.error || 'No se pudo renovar la sesión');
+  authRenovacionEnCurso = (async () => {
+    try {
+      const resp = await fetch(API_BASE + '/api/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: sesion.refreshToken })
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.error || 'No se pudo renovar la sesión');
 
-    authGuardar(data);
-    return true;
-  } catch (err) {
-    console.error('[auth] Error renovando sesión:', err);
-    authCerrarSesion();
-    return false;
-  }
+      authGuardar(data);
+      return true;
+    } catch (err) {
+      console.error('[auth] Error renovando sesión:', err);
+      localStorage.removeItem(AUTH_KEY);
+      authRenderNavbar();
+      return false;
+    } finally {
+      authRenovacionEnCurso = null;
+    }
+  })();
+  return authRenovacionEnCurso;
 }
 
 document.addEventListener('DOMContentLoaded', authRenderNavbar);
+
+function authEnsureChatbot() {
+  if (document.getElementById('chatbot-toggle') || document.getElementById('chatbot-panel')) return;
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = `
+    <button id="chatbot-toggle" type="button" onclick="cbToggle()" title="Atención al cliente" aria-label="Abrir atención al cliente">💬</button>
+    <section id="chatbot-panel" aria-label="Atención al cliente">
+      <div class="cb-header"><span>Atención al cliente</span><button type="button" onclick="cbToggle()" aria-label="Cerrar">×</button></div>
+      <div class="cb-body" id="cb-body"><div class="cb-msg bot">Hola. ¿En qué podemos ayudarte?</div></div>
+      <div class="cb-quick cb-quick-start">
+        <button type="button" data-q="¿Cuáles son los tiempos de entrega?">Tiempos de entrega</button>
+        <button type="button" data-q="¿Qué métodos de pago aceptan?">Métodos de pago</button>
+      </div>
+      <div class="cb-input"><input type="text" id="cb-input-text" placeholder="Escribe tu mensaje..." aria-label="Mensaje"><button type="button" onclick="cbEnviar()">Enviar</button></div>
+    </section>`;
+  document.body.appendChild(wrapper);
+  if (!document.querySelector('script[src$="js/chatbot.js"]')) {
+    const script = document.createElement('script');
+    script.src = 'js/chatbot.js';
+    document.body.appendChild(script);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', authEnsureChatbot);

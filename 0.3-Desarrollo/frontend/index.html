@@ -195,7 +195,7 @@
 </footer>
 
 <!-- Carrito lateral -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="carritoOffcanvas" style="width: min(1180px, 96vw);">
+<div class="offcanvas offcanvas-end" tabindex="-1" id="carritoOffcanvas" style="width: min(560px, 94vw);">
   <div class="offcanvas-header" style="background:var(--navy-900); color:var(--paper-50); border-bottom:1px solid rgba(255,255,255,.12);">
     <h5 class="offcanvas-title display-serif h6 mb-0" data-i18n="cart_title">Tu carrito</h5>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
@@ -294,6 +294,7 @@
   }
 
   let categoriasPorId = {};
+  let categoriasCatalogo = [];
   let todosLosProductos = [];
 
   async function cargarCategorias() {
@@ -302,30 +303,41 @@
       const resp = await fetch(API_BASE + '/api/categorias');
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const categorias = await resp.json();
+      categoriasCatalogo = categorias;
       categoriasPorId = Object.fromEntries(categorias.map(c => [c.id, c.nombre]));
-      sel.innerHTML = '<option value="">Todas</option>' +
-        categorias.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('');
+      actualizarOpcionesCategoria();
     } catch (err) {
       console.error(err);
     }
   }
 
+  function actualizarOpcionesCategoria() {
+    const sel = document.getElementById('filtroCategoria');
+    if (!sel) return;
+    const seleccion = sel.value;
+    sel.innerHTML = '<option value="">Todas</option>' +
+      categoriasCatalogo.map(c => `<option value="${c.id}">${escapeHtml(traducirDatoDinamico(c, 'nombre'))}</option>`).join('');
+    sel.value = seleccion;
+  }
+
   function tarjetaProducto(p) {
-    const categoriaNombre = categoriasPorId[p.categoria_id] || '';
+    const categoriaNombre = traducirDatoDinamico({ nombre: categoriasPorId[p.categoria_id] || '' }, 'nombre');
+    const nombreProducto = traducirDatoDinamico(p, 'nombre');
+    const descripcionProducto = traducirDatoDinamico(p, 'descripcion');
     const sinStock = Number(p.cantidad_disponible) <= 0;
     const detalleUrl = 'producto-detalle.html?id=' + encodeURIComponent(p.id);
     return `
       <div class="col-md-3">
         <div class="card card-producto h-100 p-3">
           <a href="${detalleUrl}" class="producto-img-placeholder">
-            <img src="${imgProducto(p)}" alt="${escapeHtml(p.nombre)}" loading="lazy">
+            <img src="${imgProducto(p)}" alt="${escapeHtml(nombreProducto)}" loading="lazy">
           </a>
           <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="categoria-tag">${escapeHtml(categoriaNombre)}</span>
+            <span class="categoria-tag" data-i18n-ignore>${escapeHtml(categoriaNombre)}</span>
             ${p.restringido ? `<span class="badge-restringido badge rounded-pill">${textoI18n('products_restricted_badge', 'Restringido')}</span>` : ''}
           </div>
-          <h3 class="h6"><a class="producto-titulo-link" href="${detalleUrl}">${escapeHtml(p.nombre)}</a></h3>
-          <p class="small text-muted flex-grow-1">${escapeHtml(p.descripcion)}</p>
+          <h3 class="h6"><a class="producto-titulo-link" data-i18n-ignore href="${detalleUrl}">${escapeHtml(nombreProducto)}</a></h3>
+          <p class="small text-muted flex-grow-1" data-i18n-ignore>${escapeHtml(descripcionProducto)}</p>
           <div class="d-flex justify-content-between align-items-center mt-1">
             <span class="precio">${formatearPrecio(p.precio)}</span>
             ${sinStock
@@ -335,7 +347,7 @@
           <div class="producto-envio">${textoI18n('products_shipping_note', 'Despacho a instalación registrada en 3–5 días hábiles')}</div>
           <button class="btn btn-sm btn-outline-dark w-100"
                   data-id="${escapeHtml(p.id)}"
-                  data-nombre="${escapeHtml(p.nombre)}"
+                  data-nombre="${escapeHtml(nombreProducto)}"
                   data-precio="${escapeHtml(p.precio)}"
                   data-imagen="${imgProducto(p)}"
                   data-restringido="${p.restringido === 1 || p.restringido === true}"
@@ -363,9 +375,12 @@
       estado.textContent = '';
     } catch (err) {
       console.error(err);
-      grid.innerHTML = '<p class="text-muted">Error cargando productos.</p>';
-      estado.textContent = 'No se pudo conectar al backend (' + err.message + ').';
+      grid.innerHTML = '';
+      estado.textContent = 'El catálogo estará disponible nuevamente en breve.';
       contador.textContent = '';
+      if (typeof mostrarNotificacion === 'function') {
+        mostrarNotificacion('Portal temporalmente fuera de línea. Reconectando con el servidor central...');
+      }
     }
   }
 
@@ -439,6 +454,10 @@
   // ── Event listeners para todos los filtros ──
   document.addEventListener('DOMContentLoaded', () => {
     cargarCategorias().then(cargarProductos);
+    window.addEventListener('idioma:cambiado', () => {
+      actualizarOpcionesCategoria();
+      aplicarFiltros();
+    });
 
     // Categoría dropdown
     document.getElementById('filtroCategoria').addEventListener('change', aplicarFiltros);

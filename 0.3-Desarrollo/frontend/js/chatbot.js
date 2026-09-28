@@ -1,28 +1,4 @@
-/* ============================================================
-   Chatbot de atención al cliente — prototipo front-end
-   En producción: este archivo solo maneja UI. Las respuestas
-   deben venir de un endpoint backend (POST /api/chatbot/mensaje)
-   que orquesta el modelo de NLP + consulta el catálogo real.
-   Aquí se simula con un motor de reglas para la demo.
-   ============================================================ */
-
-const CB_RESPUESTAS = [
-  { match: /horario|hora|abren|cierran/i, r: "Atendemos pedidos en línea las 24 horas. La entrega en sede se coordina de lunes a viernes, 7:00 a.m. a 5:00 p.m." },
-  { match: /envio|entrega|domicilio/i, r: "Los envíos a instalaciones oficiales se despachan en 2 a 5 días hábiles, según la ciudad. Necesitas registrar la dirección de entrega en tu perfil." },
-  { match: /pago|factura|precio/i, r: "Aceptamos PSE, transferencia y orden de compra institucional. Todas las compras generan factura electrónica automática." },
-  { match: /dato|privacidad|habeas|informacion personal/i, r: "Tus datos se clasifican y protegen según la Ley 1581 de 2012. Puedes ver el detalle en la sección 'Tratamiento de datos' del formulario de registro." },
-  { match: /agente|humano|persona|asesor/i, r: "Te transfiero con un agente. Un miembro del equipo revisará esta conversación en breve." },
-  { match: /gracias/i, r: "Con gusto. ¿Necesitas algo más?" },
-];
-
-const CB_DEFAULT = "No tengo una respuesta exacta para eso todavía. Puedo transferirte con un agente humano si lo prefieres — escribe 'agente'.";
-
-function cbBuscarRespuesta(texto) {
-  for (const item of CB_RESPUESTAS) {
-    if (item.match.test(texto)) return item.r;
-  }
-  return CB_DEFAULT;
-}
+/* Chat UI. Las respuestas se solicitan al proxy backend, que las reenvía a n8n. */
 
 function cbAgregarMensaje(texto, tipo) {
   const body = document.getElementById('cb-body');
@@ -33,16 +9,35 @@ function cbAgregarMensaje(texto, tipo) {
   body.scrollTop = body.scrollHeight;
 }
 
-function cbEnviar(textoManual) {
+async function cbEnviar(textoManual) {
   const input = document.getElementById('cb-input-text');
   const texto = (textoManual || input.value).trim();
   if (!texto) return;
   cbAgregarMensaje(texto, 'user');
   input.value = '';
-  setTimeout(() => {
-    cbAgregarMensaje(cbBuscarRespuesta(texto), 'bot');
+  input.disabled = true;
+  try {
+    const base = typeof API_BASE !== 'undefined' ? API_BASE : 'http://localhost:8081';
+    const respuesta = await fetch(base + '/api/atencion/mensaje', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mensaje: texto,
+        conversacionId: CB_CONVERSACION_ID,
+        idioma: typeof idiomaGuardado === 'function' ? idiomaGuardado() : 'es-419'
+      })
+    });
+    const datos = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) throw new Error(datos.error || 'Servicio de atención no disponible.');
+    cbAgregarMensaje(datos.respuesta, 'bot');
     cbOfrecerCalificacion();
-  }, 400);
+  } catch (err) {
+    console.error('[chatbot] No se pudo obtener respuesta:', err);
+    cbAgregarMensaje('La atención automatizada no está disponible por el momento. Intenta nuevamente más tarde.', 'bot');
+  } finally {
+    input.disabled = false;
+    input.focus();
+  }
 }
 
 let cbCalificado = false;
@@ -89,7 +84,7 @@ function cbToggle() {
   document.getElementById('chatbot-panel').classList.toggle('abierto');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function cbInicializar() {
   const input = document.getElementById('cb-input-text');
   if (input) {
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') cbEnviar(); });
@@ -97,4 +92,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.cb-quick-start button').forEach(btn => {
     btn.addEventListener('click', () => cbEnviar(btn.dataset.q));
   });
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', cbInicializar, { once: true });
+} else {
+  cbInicializar();
+}

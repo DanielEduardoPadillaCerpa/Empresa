@@ -134,11 +134,11 @@
     <!-- ── Información principal ── -->
     <div class="col-md-4">
       <div class="d-flex justify-content-between align-items-start mb-2">
-        <span class="eyebrow" id="detalle-categoria"></span>
+        <span class="eyebrow" id="detalle-categoria" data-i18n-ignore></span>
         <span class="badge-restringido badge rounded-pill" id="detalle-restringido" style="display:none;" data-i18n="detail_restricted_badge">Equipo restringido</span>
       </div>
-      <h1 class="display-serif h3 mb-3" id="detalle-nombre"></h1>
-      <p class="text-muted" id="detalle-descripcion"></p>
+      <h1 class="display-serif h3 mb-3" id="detalle-nombre" data-i18n-ignore></h1>
+      <p class="text-muted" id="detalle-descripcion" data-i18n-ignore></p>
 
       <div class="detalle-precio my-3" id="detalle-precio"></div>
 
@@ -194,7 +194,7 @@
               <button class="btn btn-link p-0 small fw-semibold text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#detalle-ficha-tecnica">
                 Ficha técnica (ver detalle) ▾
               </button>
-              <div class="collapse small text-muted mt-1" id="detalle-ficha-tecnica"></div>
+              <div class="collapse small text-muted mt-1" id="detalle-ficha-tecnica" data-i18n-ignore></div>
             </div>
           </li>
           <li>
@@ -221,7 +221,7 @@
 
 <!-- Carrito lateral -->
 <!-- Carrito lateral -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="carritoOffcanvas" style="width: min(1180px, 96vw);">
+<div class="offcanvas offcanvas-end" tabindex="-1" id="carritoOffcanvas" style="width: min(560px, 94vw);">
   <div class="offcanvas-header" style="background:var(--navy-900); color:var(--paper-50); border-bottom:1px solid rgba(255,255,255,.12);">
     <h5 class="offcanvas-title display-serif h6 mb-0" data-i18n="cart_title">Tu carrito</h5>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
@@ -289,7 +289,23 @@ function formatearPrecio(valor) {
 }
 
 let productoActual = null;
+let categoriaActual = '';
 let tallaSeleccionada = null;
+
+function actualizarTextoDetalle() {
+  if (!productoActual) return;
+  const nombre = traducirDatoDinamico(productoActual, 'nombre');
+  const descripcion = traducirDatoDinamico(productoActual, 'descripcion');
+  document.title = nombre + ' — Suministros Institucionales';
+  document.getElementById('detalle-imagen').alt = nombre;
+  document.getElementById('detalle-categoria').textContent = categoriaActual
+    ? 'Línea de ' + traducirDatoDinamico({ nombre: categoriaActual }, 'nombre')
+    : 'Catálogo institucional';
+  document.getElementById('detalle-nombre').textContent = nombre;
+  document.getElementById('detalle-descripcion').textContent = descripcion;
+  document.getElementById('detalle-ficha-tecnica').textContent = descripcion ||
+    'Sin información técnica adicional para este producto.';
+}
 
 async function cargarDetalle() {
   const params = new URLSearchParams(window.location.search);
@@ -315,18 +331,13 @@ async function cargarDetalle() {
 
     const p = await respProducto.json();
     const categorias = respCategorias.ok ? await respCategorias.json() : [];
-    const categoriaNombre = (categorias.find(c => String(c.id) === String(p.categoria_id)) || {}).nombre || '';
+    categoriaActual = (categorias.find(c => String(c.id) === String(p.categoria_id)) || {}).nombre || '';
 
     productoActual = p;
 
-    document.title = p.nombre + ' — Suministros Institucionales';
     document.getElementById('detalle-imagen').src = imgProducto(p);
-    document.getElementById('detalle-imagen').alt = p.nombre;
-    document.getElementById('detalle-categoria').textContent = categoriaNombre ? ('Línea de ' + categoriaNombre) : 'Catálogo institucional';
-    document.getElementById('detalle-nombre').textContent = p.nombre;
-    document.getElementById('detalle-descripcion').textContent = p.descripcion || '';
+    actualizarTextoDetalle();
     document.getElementById('detalle-precio').textContent = formatearPrecio(p.precio);
-    document.getElementById('detalle-ficha-tecnica').textContent = p.descripcion || 'Sin información técnica adicional para este producto.';
 
     // Cotización B2B
     document.getElementById('detalle-cotizacion-b2b').href =
@@ -427,6 +438,8 @@ document.getElementById('detalle-btn-agregar')?.addEventListener('click', () => 
   } else {
     items.push({
       id: idItem,
+      productoId: Number(productoActual.id),
+      variacion: tallaSeleccionada,
       nombre: productoActual.nombre + (tallaSeleccionada ? ' (Talla ' + tallaSeleccionada + ')' : ''),
       precio: Number(productoActual.precio),
       restringido: productoActual.restringido === 1 || productoActual.restringido === true,
@@ -441,6 +454,7 @@ document.getElementById('detalle-btn-agregar')?.addEventListener('click', () => 
 });
 
 document.addEventListener('DOMContentLoaded', cargarDetalle);
+window.addEventListener('idioma:cambiado', actualizarTextoDetalle);
 </script>
 </body>
 </html>

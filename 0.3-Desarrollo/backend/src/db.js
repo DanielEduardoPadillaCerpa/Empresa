@@ -320,6 +320,25 @@ async function migrarColumnasFaltantes() {
   } catch (err) {
     console.warn('[db] No se pudo agregar metadatos a productos:', err.message);
   }
+
+  const indices = [
+    ['pedidos', 'idx_pedidos_cliente_fecha', 'cliente_id, fecha_pedido'],
+    ['reportes_cliente', 'idx_reportes_cliente_fecha', 'cliente_id, fecha'],
+    ['productos', 'idx_productos_estado_stock', 'estado, cantidad_disponible']
+  ];
+  for (const [tabla, indice, columnas] of indices) {
+    try {
+      const [existente] = await pool.query(
+        'SELECT 1 FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ? LIMIT 1',
+        [tabla, indice]
+      );
+      if (!existente.length) {
+        await pool.query(`CREATE INDEX ${indice} ON ${tabla} (${columnas})`);
+      }
+    } catch (err) {
+      console.warn(`[db] No se pudo verificar/crear el índice ${indice}:`, err.message);
+    }
+  }
 }
 
 // Inserta las categorías y productos de ejemplo SOLO la primera vez

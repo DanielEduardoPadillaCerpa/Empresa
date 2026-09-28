@@ -34,6 +34,7 @@ function carritoVaciar() {
 
 function agregarAlCarrito(boton) {
   const id = boton.dataset.id;
+  const [productoId, ...variacionPartes] = String(id).split('-');
   const nombre = boton.dataset.nombre;
   const precio = parseInt(boton.dataset.precio, 10);
   const restringido = boton.dataset.restringido === 'true';
@@ -44,7 +45,16 @@ function agregarAlCarrito(boton) {
   if (existente) {
     existente.cantidad += 1;
   } else {
-    items.push({ id, nombre, precio, restringido, imagen, cantidad: 1 });
+    items.push({
+      id,
+      productoId: Number(productoId),
+      variacion: variacionPartes.length ? variacionPartes.join('-') : null,
+      nombre,
+      precio,
+      restringido,
+      imagen,
+      cantidad: 1
+    });
   }
   carritoGuardar(items);
 

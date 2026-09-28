@@ -305,6 +305,37 @@ const T = {
 
 const IDIOMA_KEY = 'si_idioma';
 
+const TRADUCCIONES_CATALOGO = {
+  'vestimenta': { 'en-US': 'Clothing', 'en-GB': 'Clothing' },
+  'dotación': { 'en-US': 'Uniforms & supplies', 'en-GB': 'Uniforms & supplies' },
+  'uniformidad': { 'en-US': 'Uniforms', 'en-GB': 'Uniforms' },
+  'protección personal': { 'en-US': 'Personal protective equipment', 'en-GB': 'Personal protective equipment' },
+  'herramientas': { 'en-US': 'Tools', 'en-GB': 'Tools' },
+  'equipo táctico': { 'en-US': 'Tactical equipment', 'en-GB': 'Tactical equipment' },
+  'fundas y portas': { 'en-US': 'Holsters & carriers', 'en-GB': 'Holsters & carriers' },
+  'tecnología': { 'en-US': 'Technology', 'en-GB': 'Technology' },
+  'tráfico y medición': { 'en-US': 'Traffic & measurement', 'en-GB': 'Traffic & measurement' },
+  'criminalística': { 'en-US': 'Forensics', 'en-GB': 'Forensics' },
+  'primeros auxilios': { 'en-US': 'First aid', 'en-GB': 'First aid' },
+  'oficina': { 'en-US': 'Office', 'en-GB': 'Office' },
+  'papelería oficial': { 'en-US': 'Official stationery', 'en-GB': 'Official stationery' },
+};
+
+function traducirDatoDinamico(registro, campo) {
+  const idioma = idiomaGuardado();
+  let metadatos = registro?.metadatos;
+  if (typeof metadatos === 'string') {
+    try { metadatos = JSON.parse(metadatos); } catch (_) { metadatos = null; }
+  }
+  const traducciones = registro?.traducciones || registro?.translations ||
+    metadatos?.traducciones || metadatos?.translations;
+  const traduccion = traducciones?.[idioma]?.[campo];
+  if (typeof traduccion === 'string' && traduccion.trim()) return traduccion;
+  const texto = String(registro?.[campo] ?? '');
+  const traduccionCatalogo = TRADUCCIONES_CATALOGO[texto.trim().toLocaleLowerCase()];
+  return traduccionCatalogo?.[idioma] || texto;
+}
+
 function claveTextoAutomatico(texto) {
   let hash = 0;
   for (let i = 0; i < texto.length; i++) {
@@ -372,6 +403,7 @@ function aplicarIdioma(lang) {
 
   const selEtiqueta = document.getElementById('idioma-actual');
   if (selEtiqueta) selEtiqueta.textContent = IDIOMAS[lang].bandera + ' ' + lang.toUpperCase();
+  window.dispatchEvent(new CustomEvent('idioma:cambiado', { detail: { idioma: lang } }));
 }
 
 function construirSelectorIdioma() {

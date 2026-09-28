@@ -52,7 +52,19 @@ Con el backend corriendo, abre `frontend/registro.html` en el navegador, llena e
 | POST | `/api/clientes` | Registrar cliente |
 | POST | `/api/clientes/:id/dato-sensible` | Registrar antecedentes judiciales (con consentimiento) |
 | POST | `/api/atencion/calificacion` | Registrar calificación del chatbot |
+| POST | `/api/atencion/mensaje` | Proxy del chatbot al workflow de n8n |
+| POST | `/api/pagos/procesar` | Verificar una solicitud de pago mediante n8n (requiere sesión) |
 | GET | `/api/reportes/mensual` | Reporte mensual (A, B, C) |
+
+## Integraciones n8n
+
+Configura `N8N_CHAT_WEBHOOK_URL` y `N8N_PAYMENT_WEBHOOK_URL` en el `.env` del backend. Ambos deben ser URLs de webhook del servidor n8n; nunca deben colocarse en el frontend. Si los webhooks están vacíos, las rutas responden `503` y no presentan el pago como exitoso. `N8N_API_TOKEN`, si se define, se envía como token Bearer al workflow.
+
+El webhook de atención recibe `{ mensaje, conversacionId, idioma }` y debe devolver una respuesta JSON con `respuesta`, `answer` u `output`.
+
+El webhook de pagos recibe un intento en el entorno indicado por `N8N_PAYMENT_ENVIRONMENT`, con cliente, dirección, productos comprobados contra el inventario, importe recalculado desde la base de datos y el email destinatario. Debe devolver `{ "estado": "aprobado|rechazado|pendiente", "referencia": "..." }`. Configura el workflow para simular explícitamente los tres resultados cuando el entorno sea `sandbox`, y para enviar el recibo a `destinatarioAdministrador` solo cuando su nodo de simulación/proveedor haya confirmado la aprobación. El endpoint no transmite números de tarjeta ni CVV; estos datos no deben enviarse a n8n. Esta conexión por sí sola no constituye una pasarela de producción ni realiza cobros reales.
+
+Después de configurar los workflows, prueba el chatbot y cada resultado de sandbox antes de habilitar pagos. La aplicación no puede certificar el envío SMTP ni la creación de nodos dentro de n8n sin las URLs y credenciales de ese servicio.
 
 ## 7. Nota de seguridad
 

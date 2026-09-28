@@ -254,9 +254,15 @@ function authHeaders(sesion) {
 // Hace la petición y, si el backend responde 401/403, redirige o informa
 // según corresponda (401 = sesión inválida, 403 = no es admin).
 async function fetchJson(sesion, ruta) {
-  const resp = await fetch(apiBaseUrl() + ruta, { headers: authHeaders(sesion) });
+  const tokenValido = await authAsegurarTokenValido();
+  if (!tokenValido) {
+    window.location.replace('login.html?redirect=admin-dashboard.html');
+    throw new Error('La sesión expiró; inicia sesión nuevamente.');
+  }
+  const sesionActual = authLeer();
+  const resp = await fetch(apiBaseUrl() + ruta, { headers: authHeaders(sesionActual || sesion) });
   if (resp.status === 401) {
-    window.location.href = 'login.html?redirect=admin-dashboard.html';
+    window.location.replace('login.html?redirect=admin-dashboard.html');
     throw new Error('sesión expirada');
   }
   if (resp.status === 403) {

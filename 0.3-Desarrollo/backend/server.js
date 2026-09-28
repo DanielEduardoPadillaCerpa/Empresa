@@ -16,6 +16,7 @@ app.get('/', (req, res) => {
 // Rutas
 app.use('/api/clientes', require('./src/routes/clientes'));
 app.use('/api/atencion', require('./src/routes/atencion'));
+app.use('/api/pagos', require('./src/routes/pagos'));
 app.use('/api/reportes', require('./src/routes/reportes'));
 app.use('/api/auth', require('./src/routes/auth').router);
 app.use('/api/pedidos', require('./src/routes/pedidos'));
