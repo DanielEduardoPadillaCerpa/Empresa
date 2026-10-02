@@ -648,35 +648,48 @@ footer.institucional {
 }
 footer.institucional a { color: var(--paper-100); }
 
-/* ---------- Chatbot flotante ---------- */
+/* ---------- Chatbot flotante (CORREGIDO) ---------- */
 #chatbot-toggle {
-  position: fixed;
-  bottom: 22px; right: 22px;
-  width: 56px; height: 56px;
+  position: fixed; /* Asegura el comportamiento flotante global */
+  bottom: 25px;    /* Separación elegante de la esquina inferior */
+  right: 25px;     /* Separación elegante de la esquina derecha */
+  width: 56px; 
+  height: 56px;
   border-radius: 50%;
   background: var(--navy-900);
   border: 2px solid var(--brass-600);
   color: var(--brass-500);
-  display: flex; align-items: center; justify-content: center;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
   font-size: 1.4rem;
-  z-index: 1050;
+  z-index: 999999; /* CAPA MÁXIMA: Fuerza al botón a flotar por encima de absolutamente TODO */
   box-shadow: 0 4px 14px rgba(11,35,64,0.35);
   cursor: pointer;
+  transition: transform 0.2s ease;
 }
+
+#chatbot-toggle:hover {
+  transform: scale(1.08); /* Efecto interactivo al pasar el cursor */
+}
+
 #chatbot-panel {
   position: fixed;
-  bottom: 90px; right: 22px;
-  width: 340px; max-width: 92vw;
+  bottom: 95px; /* Se posiciona exactamente arriba de la burbuja */
+  right: 25px;
+  width: 340px; 
+  max-width: 92vw;
   height: 460px;
   background: var(--paper-50);
   border: 1px solid var(--navy-900);
   border-radius: var(--radius);
   display: none;
   flex-direction: column;
-  z-index: 1050;
+  z-index: 999999; /* Comparte la misma prioridad de capa que el botón */
   box-shadow: 0 10px 30px rgba(11,35,64,0.3);
   overflow: hidden;
 }
+
 #chatbot-panel.abierto { display: flex; }
 #chatbot-panel .cb-header {
   background: var(--navy-900);

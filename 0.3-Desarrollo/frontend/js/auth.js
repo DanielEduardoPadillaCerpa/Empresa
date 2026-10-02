@@ -58,8 +58,26 @@ function confirmarAccion(mensaje) {
   });
 }
 
+function authMigrarCarritoInvitado(correo) {
+  if (!correo) return;
+  try {
+    const kInv = 'si_carrito:invitado';
+    const kUsr = 'si_carrito:' + String(correo).toLowerCase();
+    const inv = JSON.parse(localStorage.getItem(kInv)) || [];
+    if (!inv.length) return;
+    const usr = JSON.parse(localStorage.getItem(kUsr)) || [];
+    inv.forEach(it => {
+      const ya = usr.find(x => x.id === it.id);
+      if (ya) ya.cantidad += it.cantidad; else usr.push(it);
+    });
+    localStorage.setItem(kUsr, JSON.stringify(usr));
+    localStorage.removeItem(kInv);
+  } catch {}
+}
+
 function authGuardar(datos) {
   localStorage.setItem(AUTH_KEY, JSON.stringify(datos));
+  authMigrarCarritoInvitado(datos?.correo);
   authRenderNavbar();
 }
 
@@ -86,7 +104,9 @@ function authCerrarSesion() {
       body: JSON.stringify({ refreshToken: sesion.refreshToken })
     }).catch(() => {});
   }
+  localStorage.removeItem('si_carrito:invitado');
   localStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem('si_carrito:' + (sesion?.correo || '').toLowerCase());
   authRenderNavbar();
   window.location.href = 'landing.html';
 }
@@ -97,6 +117,13 @@ function authRenderNavbar() {
   const logueado = !!sesion?.correo;
   const esAdmin = !!(logueado && sesion?.rol === 'admin' &&
     (!sesion.expiraEn || Number(sesion.expiraEn) > Date.now()));
+
+  const pathname = window.location.pathname.split('/').pop() || '';
+  const params = new URLSearchParams(window.location.search);
+  const esDashboardAdmin = pathname === 'admin-dashboard.html';
+  const esVistaAdmin = /^admin-.+\.html$/.test(pathname) ||
+    pathname === 'reportes.html' ||
+    (pathname === 'registro.html' && (params.get('modo') === 'admin' || esAdmin));
 
   if (slot) {
     if (logueado) {
@@ -136,6 +163,45 @@ function authRenderNavbar() {
   document.querySelectorAll('.nav-cliente-link').forEach(el => {
     el.style.display = logueado ? '' : 'none';
   });
+
+  const navbar = document.querySelector('.navbar .navbar-nav');
+  if (navbar && esVistaAdmin && esAdmin) {
+    const brand = document.querySelector('.navbar .navbar-brand');
+    const toggler = document.querySelector('.navbar .navbar-toggler');
+    const navbarCollapse = navbar.closest('.navbar-collapse');
+    if (brand) brand.style.display = 'none';
+    if (toggler) toggler.style.display = 'none';
+    if (navbarCollapse) navbarCollapse.classList.add('show');
+
+    if (esDashboardAdmin) {
+      Array.from(navbar.children).forEach(item => {
+        const dashboardLink = item.querySelector('a[href="admin-dashboard.html"], a[data-i18n="nav_dashboard"], a.active');
+        item.style.display = dashboardLink ? '' : 'none';
+      });
+    } else {
+      let backLink = navbar.querySelector('a[href="admin-dashboard.html"], #nav-regresar-admin-global, #nav-regresar-admin')
+        || document.getElementById('nav-regresar-admin');
+      if (!backLink) {
+        const li = document.createElement('li');
+        li.className = 'nav-item';
+        backLink = document.createElement('a');
+        backLink.id = 'nav-regresar-admin-global';
+        backLink.className = 'nav-link';
+        li.appendChild(backLink);
+        navbar.insertBefore(li, navbar.firstChild);
+      }
+
+      backLink.href = 'admin-dashboard.html';
+      backLink.textContent = '← Regresar al panel principal';
+      backLink.style.display = 'inline-flex';
+
+      Array.from(navbar.children).forEach(item => {
+        item.style.display = item.contains(backLink) ? '' : 'none';
+      });
+      const backItem = backLink.closest('li');
+      if (backItem) backItem.style.display = '';
+    }
+  }
 
   if (esAdmin) {
     document.querySelectorAll('.navbar a[href="admin-dashboard.html"]').forEach(el => {
@@ -180,7 +246,6 @@ function authRenderNavbar() {
       });
     }
 
-    const navbar = document.querySelector('.navbar .navbar-nav');
     const tieneDashboard = navbar && Array.from(navbar.querySelectorAll('a'))
       .some(link => link.getAttribute('href') === 'admin-dashboard.html');
     const modoRegistroAdmin = document.body.classList.contains('modo-admin-registro');

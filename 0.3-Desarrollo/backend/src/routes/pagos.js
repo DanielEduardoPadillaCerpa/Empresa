@@ -103,7 +103,10 @@ router.post('/procesar', requiereAutenticacion, async (req, res) => {
     res.json({
       estado,
       referencia: typeof result.referencia === 'string' ? result.referencia.slice(0, 120) : null,
-      mensaje: typeof result.mensaje === 'string' ? result.mensaje.slice(0, 300) : null
+      mensaje: typeof result.mensaje === 'string' ? result.mensaje.slice(0, 300) : null,
+      importe: Math.round(importe * 100) / 100,
+      moneda: 'COP',
+      fecha: new Date().toISOString()
     });
   } catch (err) {
     console.error('[pagos] Error consultando el workflow de n8n:', err.message);

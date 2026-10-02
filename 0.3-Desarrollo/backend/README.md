@@ -20,6 +20,7 @@ npm install
 1. Copia `.env.example` y renómbralo a `.env`.
 2. Completa `DB_PASSWORD` con la contraseña de tu base (recuerda regenerarla en Clever Cloud, ya que se compartió antes en una captura de pantalla).
 3. Cambia `CRYPTO_KEY` por una clave propia de 32 caracteres (no dejes la de ejemplo).
+4. Conserva `DB_CONNECTION_LIMIT=4` o ajústalo a un valor menor según el límite de conexiones de tu proveedor. El backend lo limita a cuatro para evitar agotar el cupo de MySQL con consultas concurrentes.
 
 El archivo `.env` **no se sube a ningún repositorio** — ya está pensado para quedarse solo en tu máquina.
 

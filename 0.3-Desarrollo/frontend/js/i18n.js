@@ -362,7 +362,11 @@ function registrarTextoAutomatico(elemento) {
 }
 
 function etiquetarTextosSinClave(raiz = document) {
-  raiz.querySelectorAll('title, h1, h2, h3, h4, h5, h6, p, label, th, td, button, a, span, option, div').forEach(elemento => {
+  const selector = 'title, h1, h2, h3, h4, h5, h6, p, label, th, td, button, a, span, option, div';
+  const elementos = Array.from(raiz.querySelectorAll(selector));
+  // querySelectorAll no incluye al propio nodo raíz: lo agregamos si aplica.
+  if (raiz !== document && raiz.matches && raiz.matches(selector)) elementos.push(raiz);
+  elementos.forEach(elemento => {
     if (elemento.closest('script, style, template, [aria-hidden="true"]')) return;
     if (elemento.hasAttribute('data-i18n-ignore')) return;
     if (elemento.children.length > 0) return;
@@ -379,30 +383,51 @@ function textoI18n(clave, fallback) {
   return T[clave]?.[lang] ?? fallback;
 }
 
-function aplicarIdioma(lang) {
-  if (!IDIOMAS[lang]) lang = 'es-419';
-  localStorage.setItem(IDIOMA_KEY, lang);
-  document.documentElement.lang = lang.split('-')[0];
+// Traduce SOLO el DOM (o un subárbol). NO emite eventos ni escribe en localStorage.
+// Es segura de llamar desde el MutationObserver sin provocar realimentación.
+function traducirDOM(raiz, lang) {
+  raiz = raiz || document;
+  etiquetarTextosSinClave(raiz);
 
-  etiquetarTextosSinClave();
-
-  document.querySelectorAll('[data-i18n]').forEach(el => {
+  const conClave = Array.from(raiz.querySelectorAll('[data-i18n]'));
+  if (raiz !== document && raiz.matches && raiz.matches('[data-i18n]')) conClave.push(raiz);
+  conClave.forEach(el => {
     if (el.hasAttribute('data-i18n-ignore')) return;
     const clave = el.getAttribute('data-i18n');
-    if (T[clave] && T[clave][lang] !== undefined) {
+    if (T[clave] && T[clave][lang] !== undefined && el.textContent !== T[clave][lang]) {
       el.textContent = T[clave][lang];
     }
   });
 
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+  const conPlaceholder = Array.from(raiz.querySelectorAll('[data-i18n-placeholder]'));
+  if (raiz !== document && raiz.matches && raiz.matches('[data-i18n-placeholder]')) conPlaceholder.push(raiz);
+  conPlaceholder.forEach(el => {
     const clave = el.getAttribute('data-i18n-placeholder');
     if (T[clave] && T[clave][lang] !== undefined) {
       el.setAttribute('placeholder', T[clave][lang]);
     }
   });
+}
 
-  const selEtiqueta = document.getElementById('idioma-actual');
-  if (selEtiqueta) selEtiqueta.textContent = IDIOMAS[lang].bandera + ' ' + lang.toUpperCase();
+let aplicandoIdioma = false;
+
+// Cambio de idioma "real" (carga inicial o selector de idioma). Es el ÚNICO
+// lugar que emite 'idioma:cambiado'.
+function aplicarIdioma(lang) {
+  if (aplicandoIdioma) return; // protección contra reentrada
+  aplicandoIdioma = true;
+  try {
+    if (!IDIOMAS[lang]) lang = 'es-419';
+    localStorage.setItem(IDIOMA_KEY, lang);
+    document.documentElement.lang = lang.split('-')[0];
+
+    traducirDOM(document, lang);
+
+    const selEtiqueta = document.getElementById('idioma-actual');
+    if (selEtiqueta) selEtiqueta.textContent = IDIOMAS[lang].bandera + ' ' + lang.toUpperCase();
+  } finally {
+    aplicandoIdioma = false;
+  }
   window.dispatchEvent(new CustomEvent('idioma:cambiado', { detail: { idioma: lang } }));
 }
 
@@ -425,15 +450,33 @@ document.addEventListener('DOMContentLoaded', () => {
   construirSelectorIdioma();
   aplicarIdioma(idiomaGuardado());
 
+  // Traduce el contenido que se inserta dinámicamente (tarjetas de productos, etc.).
+  // - Solo procesa los nodos NUEVOS (no todo el documento).
+  // - NO llama a aplicarIdioma (que emite 'idioma:cambiado'): eso creaba un ciclo
+  //   infinito con los listeners que vuelven a renderizar el catálogo.
+  // - Se desconecta mientras traduce, para no observar sus propios cambios.
+  const pendientes = new Set();
+  let programado = false;
+
   const observadorTextos = new MutationObserver(mutations => {
     mutations.forEach(mutation => {
       mutation.addedNodes.forEach(nodo => {
-        if (nodo.nodeType === Node.ELEMENT_NODE) {
-          etiquetarTextosSinClave(nodo);
-          aplicarIdioma(idiomaGuardado());
-        }
+        if (nodo.nodeType === Node.ELEMENT_NODE) pendientes.add(nodo);
       });
     });
+    if (!pendientes.size || programado) return;
+    programado = true;
+    setTimeout(() => {
+      programado = false;
+      observadorTextos.disconnect();
+      try {
+        const lang = idiomaGuardado();
+        pendientes.forEach(nodo => { if (nodo.isConnected) traducirDOM(nodo, lang); });
+      } finally {
+        pendientes.clear();
+        observadorTextos.observe(document.body, { childList: true, subtree: true });
+      }
+    }, 0);
   });
   observadorTextos.observe(document.body, { childList: true, subtree: true });
 });

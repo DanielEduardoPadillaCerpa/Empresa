@@ -1,6 +1,11 @@
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 
+const configuredConnectionLimit = Number(process.env.DB_CONNECTION_LIMIT);
+const connectionLimit = Number.isSafeInteger(configuredConnectionLimit) && configuredConnectionLimit > 0
+  ? Math.min(configuredConnectionLimit, 4)
+  : 4;
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT || 3306,
@@ -8,7 +13,7 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit,
   connectTimeout: 20000,
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,

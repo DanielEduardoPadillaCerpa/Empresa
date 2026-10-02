@@ -4,11 +4,21 @@
    vía POST /api/pedidos, para que quede guardado en la base de datos.
    ============================================================ */
 
-const CARRITO_KEY = 'si_carrito';
+const CARRITO_KEY_BASE = 'si_carrito';
+
+// Un carrito por usuario; sin sesión se usa el de "invitado".
+function carritoKey() {
+  let correo = '';
+  try { correo = (JSON.parse(localStorage.getItem('si_auth'))?.correo || '').toLowerCase(); } catch {}
+  return CARRITO_KEY_BASE + ':' + (correo || 'invitado');
+}
+
+// Elimina el carrito compartido de la versión anterior.
+localStorage.removeItem(CARRITO_KEY_BASE);
 
 function carritoLeer() {
   try {
-    const items = JSON.parse(localStorage.getItem(CARRITO_KEY)) || [];
+    const items = JSON.parse(localStorage.getItem(carritoKey())) || [];
     return items.filter(i => i.id);
   } catch {
     return [];

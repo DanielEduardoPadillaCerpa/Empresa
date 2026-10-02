@@ -128,6 +128,53 @@
     background: var(--paper-50, #fafaf7); border: 1px solid rgba(11,35,64,.1);
     border-radius: 8px; padding: 1rem; margin-top: .75rem;
   }
+    /* ===== Recibo de pago ===== */
+  .recibo-wrap { background:#eaf0f8; border-radius:20px; padding:2rem 1rem; }
+  .recibo { max-width:420px; margin:0 auto; font-family:var(--font-body); color:#0f172a; }
+  .recibo-card { background:#fff; border-radius:22px; box-shadow:0 12px 30px rgba(15,23,42,.12); overflow:hidden; }
+  .recibo-top { padding:1.6rem 1.5rem 1rem; }
+  .recibo-marca { text-align:center; line-height:1.05; margin-bottom:1.2rem; }
+  .recibo-marca b { display:block; font-family:var(--font-display); font-size:1.8rem; font-weight:800; color:#0f172a; }
+  .recibo-marca b.azul { color:#0d4f9c; }
+  .recibo-marca small { display:block; margin-top:.3rem; font-size:.62rem; font-weight:700; letter-spacing:.02em; }
+  .recibo-estado { display:flex; align-items:center; justify-content:center; gap:.6rem; margin-bottom:1rem; }
+  .recibo-estado h2 { margin:0; font-size:1.35rem; font-weight:800; }
+  .recibo-icono { width:34px; height:34px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:1.1rem; }
+  .recibo-estado.ok   .recibo-icono { background:#43a35a; }
+  .recibo-estado.pend .recibo-icono { background:#d97706; }
+  .recibo-estado.err  .recibo-icono { background:#b91c1c; }
+  .recibo-fila { display:flex; justify-content:space-between; gap:1rem; padding:.28rem 0; font-size:.95rem; }
+  .recibo-fila span:first-child { color:#475569; }
+  .recibo-fila span:last-child { font-weight:800; text-align:right; word-break:break-word; }
+  .recibo-fila .v-ok   { color:#43a35a; }
+  .recibo-fila .v-pend { color:#d97706; }
+  .recibo-fila .v-err  { color:#b91c1c; }
+  .recibo-items { margin-top:.7rem; padding-top:.6rem; border-top:1px solid #e2e8f0; font-size:.85rem; }
+  .recibo-items .linea { display:flex; justify-content:space-between; gap:.8rem; padding:.15rem 0; }
+  .recibo-items .linea span:last-child { white-space:nowrap; font-weight:700; }
+  .recibo-nota { margin:.8rem 0 0; font-size:.75rem; color:#64748b; text-align:center; }
+  .recibo-corte { position:relative; height:26px; margin-top:.8rem; }
+  .recibo-corte::before { content:''; position:absolute; left:22px; right:22px; top:12px; border-top:2px dashed #0f172a; }
+  .recibo-corte i { position:absolute; top:0; width:26px; height:26px; border-radius:50%; background:#eaf0f8; }
+  .recibo-corte i:first-child { left:-13px; }
+  .recibo-corte i:last-child  { right:-13px; }
+  .recibo-total { display:flex; justify-content:space-between; align-items:center; padding:.6rem 1.5rem 1.5rem; }
+  .recibo-total span:first-child { font-size:1.5rem; font-weight:800; }
+  .recibo-total span:last-child  { font-size:1.9rem; font-weight:800; color:#0d4f9c; }
+  .recibo-acciones { max-width:420px; margin:1.4rem auto 0; display:grid; gap:.8rem; text-align:center; }
+  .btn-recibo { display:block; border-radius:999px; padding:.9rem 1rem; font-size:1.05rem; text-decoration:none; cursor:pointer; border:2px solid #0d4f9c; background:#0d4f9c; color:#fff; }
+  .btn-recibo.sec { background:transparent; color:#0d4f9c; }
+  .btn-recibo:hover { opacity:.92; }
+  .recibo-compartir { display:flex; flex-direction:column; align-items:center; gap:.5rem; font-size:.9rem; }
+  .recibo-compartir div { display:flex; gap:.7rem; }
+  .recibo-icono-btn { width:48px; height:48px; border-radius:14px; background:#0d4f9c; color:#fff; border:0; display:inline-flex; align-items:center; justify-content:center; font-size:1.3rem; text-decoration:none; cursor:pointer; }
+  .recibo-card, .recibo-icono, .recibo-wrap { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  @media print {
+    body * { visibility:hidden !important; }
+    #recibo-imprimible, #recibo-imprimible * { visibility:visible !important; }
+    #recibo-imprimible { position:absolute; left:0; top:0; width:100%; background:#fff !important; }
+    .recibo-card { box-shadow:none; }
+  }
 </style>
 </head>
 <body>
@@ -785,7 +832,9 @@ async function simularPasarela(metodo, direccion, sesion) {
   return {
     estado: resultado.estado,
     ref: resultado.referencia,
-    mensaje: resultado.mensaje
+    mensaje: resultado.mensaje,
+    importe: resultado.importe,
+    fecha: resultado.fecha
   };
 }
 
@@ -820,7 +869,126 @@ async function registrarPedido(sesion, direccion, metodo, referencia) {
     return { ok: false, error: 'No fue posible conectar con el servidor para registrar el pedido.' };
   }
 }
+// ===== Recibo de pago =====
+const RECIBO_ESTADOS = {
+  aprobado:  { clase: 'ok',   icono: '✓', titulo: 'Transacción Aprobada',  etiqueta: 'Aprobada' },
+  pendiente: { clase: 'pend', icono: '…', titulo: 'Transacción Pendiente', etiqueta: 'Pendiente' },
+  rechazado: { clase: 'err',  icono: '✕', titulo: 'Transacción Rechazada', etiqueta: 'Rechazada' }
+};
 
+function reciboEsc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function reciboMoneda(v) {
+  return '$' + Number(v || 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function reciboFecha(iso) {
+  let d = iso ? new Date(iso) : new Date();
+  if (isNaN(d)) d = new Date();
+  return d.toLocaleString('sv-SE', { timeZone: 'America/Bogota' }); // 2026-09-30 20:32:00
+}
+
+function reciboTextoPlano(r, est) {
+  const lineas = r.items.map(i => `- ${i.cantidad} x ${i.nombre}${i.variacion ? ' (' + i.variacion + ')' : ''}: ${reciboMoneda(i.precio * i.cantidad)}`);
+  return [
+    'Suministros Institucionales - ' + est.titulo,
+    'Estado: ' + est.etiqueta,
+    'Fecha y hora: ' + reciboFecha(r.fecha),
+    'Medio de pago: ' + r.metodo,
+    'Referencia: ' + (r.referencia || '-'),
+    r.pedidoId ? 'Pedido: #' + r.pedidoId : null,
+    'Cliente / Entidad: ' + r.cliente,
+    'Entrega: ' + r.direccion,
+    '',
+    ...lineas,
+    '',
+    'Total: ' + reciboMoneda(r.total),
+    '(Entorno de pruebas: no se realizó ningún cobro real)'
+  ].filter(l => l !== null).join('\n');
+}
+
+function construirRecibo(r) {
+  const est = RECIBO_ESTADOS[r.estado] || RECIBO_ESTADOS.pendiente;
+  const colorValor = { ok: 'v-ok', pend: 'v-pend', err: 'v-err' }[est.clase];
+  const mailto = 'mailto:?subject=' + encodeURIComponent('Recibo de pago ' + (r.referencia || '')) +
+                 '&body=' + encodeURIComponent(reciboTextoPlano(r, est));
+
+  const lineasHtml = r.items.map(i => `
+        <div class="linea">
+          <span>${reciboEsc(i.cantidad)} × ${reciboEsc(i.nombre)}${i.variacion ? ' (' + reciboEsc(i.variacion) + ')' : ''}</span>
+          <span>${reciboMoneda(i.precio * i.cantidad)}</span>
+        </div>`).join('');
+
+  const notas = {
+    aprobado:  'Tu pedido fue registrado correctamente.',
+    pendiente: 'Tu banco aún debe confirmar el pago. Te notificaremos por correo cuando se apruebe.',
+    rechazado: 'Verifica los datos o intenta con otro método de pago.'
+  }[r.estado] || '';
+
+  const botonPrincipal = r.estado === 'rechazado'
+    ? '<button type="button" class="btn-recibo" onclick="cerrarRecibo()">Intentar de nuevo</button>'
+    : '<a class="btn-recibo" href="#" onclick="window.print(); return false;">Descargar / Imprimir</a>';
+  const botonSecundario = '<a class="btn-recibo sec" href="index.html">Regresar al comercio</a>';
+  const enlacePedidos = r.estado === 'rechazado' ? '' :
+    '<a class="btn-recibo sec" href="historial.html">Ver mis pedidos</a>';
+
+  return `
+    <div class="recibo-contenedor">
+      <div class="recibo-wrap" id="recibo-imprimible">
+        <div class="recibo">
+          <div class="recibo-card">
+            <div class="recibo-top">
+              <div class="recibo-marca">
+                <b>Suministros</b><b class="azul">Institucionales</b>
+                <small>PROVEEDOR AUTORIZADO · REG-2026-0417</small>
+              </div>
+              <div class="recibo-estado ${est.clase}">
+                <span class="recibo-icono">${est.icono}</span>
+                <h2>${est.titulo}</h2>
+              </div>
+              <div class="recibo-fila"><span>Estado:</span><span class="${colorValor}">${est.etiqueta}</span></div>
+              <div class="recibo-fila"><span>Fecha y hora:</span><span>${reciboFecha(r.fecha)}</span></div>
+              <div class="recibo-fila"><span>Medio de pago:</span><span>${reciboEsc(r.metodo)}</span></div>
+              <div class="recibo-fila"><span>Referencia:</span><span>${reciboEsc(r.referencia || '—')}</span></div>
+              ${r.pedidoId ? `<div class="recibo-fila"><span>Pedido:</span><span>#${reciboEsc(r.pedidoId)}</span></div>` : ''}
+              <div class="recibo-fila"><span>Cliente / Entidad:</span><span>${reciboEsc(r.cliente)}</span></div>
+              <div class="recibo-fila"><span>Entrega en:</span><span>${reciboEsc(r.direccion)}</span></div>
+              <div class="recibo-items">${lineasHtml}</div>
+              <p class="recibo-nota">${notas}<br>Entorno de pruebas: no se realizó ningún cobro real.</p>
+            </div>
+            <div class="recibo-corte"><i></i><i></i></div>
+            <div class="recibo-total"><span>Total:</span><span>${reciboMoneda(r.total)}</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="recibo-acciones">
+        ${botonPrincipal}
+        ${enlacePedidos}
+        ${botonSecundario}
+        <div class="recibo-compartir">
+          <span>Compartir por</span>
+          <div>
+            <button type="button" class="recibo-icono-btn" title="Imprimir" onclick="window.print()">🖨</button>
+            <a class="recibo-icono-btn" title="Correo" href="${mailto}">✉</a>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function mostrarRecibo(r) {
+  const el = document.getElementById('resultado-pago');
+  el.innerHTML = construirRecibo(r);
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cerrarRecibo() {
+  const el = document.getElementById('resultado-pago');
+  el.style.display = 'none';
+  el.innerHTML = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 async function procesarPago() {
   ocultarError();
   if (!items.length) return;
@@ -846,96 +1014,52 @@ async function procesarPago() {
   btnEmp.disabled = true;
 
   try {
-    mostrarOverlay('Conectando con ' + metodo + '...', 'Verificando disponibilidad de productos');
+    // Foto de la compra ANTES de vaciar el carrito: el recibo la necesita.
+    const datosCompra = obtenerDatosComprador();
+    const lineasRecibo = items.map(i => ({
+      nombre: i.nombre, cantidad: i.cantidad, precio: i.precio, variacion: i.variacion || ''
+    }));
+    const totalLocal = items.reduce((s, i) => s + i.precio * i.cantidad, 0);
+    const clienteRecibo = datosCompra.razonSocial || datosCompra.nombre || sesion.nombre || sesion.correo || '—';
+
     mostrarOverlay('Procesando pago con ' + metodo + '...', 'No cierres ni recargues esta ventana');
     const resultado = await simularPasarela(metodo, direccion, sesion);
-
     ocultarOverlay();
 
-    const resultadoEl = document.getElementById('resultado-pago');
-    const contenidoEl = document.getElementById('checkout-contenido');
+    const armarRecibo = (pedidoId) => ({
+      estado: resultado.estado,
+      metodo,
+      referencia: resultado.ref,
+      fecha: resultado.fecha,
+      cliente: clienteRecibo,
+      direccion,
+      pedidoId,
+      items: lineasRecibo,
+      total: resultado.importe != null ? resultado.importe : totalLocal
+    });
 
-    if (resultado.estado === 'aprobado') {
-      mostrarOverlay('Registrando tu pedido...', 'Ya casi terminamos');
-      const pedido = await registrarPedido(sesion, direccion, metodo, resultado.ref);
-      ocultarOverlay();
-      if (!pedido.ok) {
-        mostrarNotificacion(pedido.error || 'No se pudo registrar el pedido. Conservamos tu carrito para reintentar.', 'error');
-        btnNat.disabled = false;
-        btnEmp.disabled = false;
-        return;
-      }
-
-      carritoVaciar();
-      items = [];
-
-      contenidoEl.style.display = 'none';
-      resultadoEl.style.display = 'block';
-      resultadoEl.innerHTML = `
-        <div class="resultado-aprobado text-center">
-          <div style="font-size:3.5rem;">✅</div>
-          <h2 class="h4 mt-3 mb-2">¡Pago aprobado!</h2>
-          <p class="mb-1">Tu pedido fue registrado exitosamente.</p>
-          <p class="small mb-0 opacity-75">
-            Referencia: <strong>${resultado.ref}</strong>
-            ${pedido.id ? ' · Pedido #' + pedido.id : ''}
-          </p>
-          <hr class="my-3">
-          <div class="d-flex gap-3 justify-content-center flex-wrap">
-            <a href="historial.html" class="btn btn-dark">Ver mis pedidos</a>
-            <a href="index.html"     class="btn btn-outline-secondary">Seguir comprando</a>
-          </div>
-          <p class="small text-muted mt-3 mb-0">Redirigiendo a tu historial en <span id="cuenta-regresiva">5</span> s...</p>
-        </div>`;
-
-      let seg = 5;
-      const intervalo = setInterval(() => {
-        seg--;
-        const el = document.getElementById('cuenta-regresiva');
-        if (el) el.textContent = seg;
-        if (seg <= 0) { clearInterval(intervalo); window.location.href = 'historial.html'; }
-      }, 1000);
-    }
-
-    else if (resultado.estado === 'rechazado') {
-      resultadoEl.style.display = 'block';
-      resultadoEl.innerHTML = `
-        <div class="resultado-rechazado mb-4">
-          <strong>❌ Pago rechazado</strong><br>
-          <span class="small">Tu entidad financiera rechazó la transacción.
-          Verifica los datos o intenta con otro método de pago.</span>
-        </div>`;
+    if (resultado.estado === 'rechazado') {
+      mostrarRecibo(armarRecibo(null));
       btnNat.disabled = false;
       btnEmp.disabled = false;
+      return;
     }
 
-    else {
-      mostrarOverlay('Registrando tu pedido...', 'Ya casi terminamos');
-      const pedido = await registrarPedido(sesion, direccion, metodo, resultado.ref);
-      ocultarOverlay();
-      if (!pedido.ok) {
-        mostrarNotificacion(pedido.error || 'No se pudo registrar el pedido. Conservamos tu carrito para reintentar.', 'error');
-        btnNat.disabled = false;
-        btnEmp.disabled = false;
-        return;
-      }
-
-      carritoVaciar();
-      items = [];
-      contenidoEl.style.display = 'none';
-      resultadoEl.style.display = 'block';
-      resultadoEl.innerHTML = `
-        <div class="resultado-pendiente text-center">
-          <div style="font-size:3.5rem;">⏳</div>
-          <h2 class="h4 mt-3 mb-2">Pago en revisión</h2>
-          <p class="mb-1">Tu pago está pendiente de confirmación por tu banco.</p>
-          <p class="small mb-0 opacity-75">Referencia: <strong>${resultado.ref}</strong>
-          ${pedido.id ? ' · Pedido #' + pedido.id : ''}</p>
-          <p class="small mt-2 mb-0">Te notificaremos por correo cuando se apruebe.</p>
-          <hr class="my-3">
-          <a href="historial.html" class="btn btn-dark">Ver mis pedidos</a>
-        </div>`;
+    // aprobado o pendiente: se registra el pedido
+    mostrarOverlay('Registrando tu pedido...', 'Ya casi terminamos');
+    const pedido = await registrarPedido(sesion, direccion, metodo, resultado.ref);
+    ocultarOverlay();
+    if (!pedido.ok) {
+      mostrarNotificacion(pedido.error || 'No se pudo registrar el pedido. Conservamos tu carrito para reintentar.', 'error');
+      btnNat.disabled = false;
+      btnEmp.disabled = false;
+      return;
     }
+
+    carritoVaciar();
+    items = [];
+    document.getElementById('checkout-contenido').style.display = 'none';
+    mostrarRecibo(armarRecibo(pedido.id));
 
   } catch (err) {
     ocultarOverlay();
@@ -944,7 +1068,6 @@ async function procesarPago() {
     btnEmp.disabled = false;
   }
 }
-
 document.getElementById('btn-pagar-natural').addEventListener('click', procesarPago);
 document.getElementById('btn-pagar-empresa').addEventListener('click', procesarPago);
 </script>

@@ -90,14 +90,14 @@
         <div class="field-ficha publico">
           <span class="clasif-badge publico" data-i18n="privacy_public">Público</span>
           <label class="form-label" data-i18n="registration_unit_name">Nombre de la unidad / instalación</label>
-          <input type="text" id="nombreUnidad" class="form-control" placeholder="Ej. Estación de Policía Norte" data-i18n-placeholder="registration_unit_placeholder" required>
+          <input type="text" id="nombreUnidad" name="nombre_unidad" autocomplete="organization" class="form-control" placeholder="Ej. Estación de Policía Norte" data-i18n-placeholder="registration_unit_placeholder" required>
           <div class="form-text" data-i18n="registration_public_note">Consta en registros públicos institucionales — no requiere autorización especial.</div>
         </div>
 
         <div class="field-ficha publico">
           <span class="clasif-badge publico" data-i18n="privacy_public">Público</span>
           <label class="form-label" data-i18n="registration_official_address">Dirección de la instalación oficial</label>
-          <input type="text" id="direccionInstalacion" class="form-control" placeholder="Dirección de la sede" data-i18n-placeholder="registration_address_placeholder" required>
+          <input type="text" id="direccionInstalacion" name="direccion_instalacion" autocomplete="street-address" class="form-control" placeholder="Dirección de la sede" data-i18n-placeholder="registration_address_placeholder" required>
         </div>
 
         <h2 class="h6 text-uppercase text-muted mb-3 mt-4" style="letter-spacing:.08em;" data-i18n="registration_section_commercial">2. Datos comerciales</h2>
@@ -105,7 +105,7 @@
         <div class="field-ficha semiprivado">
           <span class="clasif-badge semiprivado" data-i18n="privacy_semiprivate">Semiprivado</span>
           <label class="form-label" data-i18n="registration_tax_id">NIT / código presupuestal</label>
-          <input type="text" id="nit" class="form-control" placeholder="900.XXX.XXX-X" required>
+          <input type="text" id="nit" name="nit" autocomplete="off" class="form-control" placeholder="900.XXX.XXX-X" required>
           <div class="form-text" data-i18n="registration_commercial_note">Interesa a la relación comercial (facturación, cumplimiento de pago).</div>
         </div>
 
@@ -114,7 +114,7 @@
         <div class="field-ficha privado">
           <span class="clasif-badge privado" data-i18n="privacy_private">Privado</span>
           <label class="form-label" data-i18n="registration_official_name">Nombre completo del funcionario que gestiona la compra</label>
-          <input type="text" id="nombreFuncionario" class="form-control" required>
+          <input type="text" id="nombreFuncionario" name="nombre_funcionario" autocomplete="name" class="form-control" required>
         </div>
 
         <div class="row">
@@ -122,14 +122,14 @@
             <div class="field-ficha privado">
               <span class="clasif-badge privado" data-i18n="privacy_private">Privado</span>
               <label class="form-label" data-i18n="registration_email">Correo electrónico</label>
-              <input type="email" id="correo" class="form-control" required>
+              <input type="email" id="correo" name="correo" autocomplete="email" class="form-control" required>
             </div>
           </div>
           <div class="col-md-6">
             <div class="field-ficha privado">
               <span class="clasif-badge privado" data-i18n="privacy_private">Privado</span>
               <label class="form-label" data-i18n="registration_phone">Teléfono de contacto</label>
-              <input type="tel" id="telefono" class="form-control" required>
+              <input type="tel" id="telefono" name="telefono" autocomplete="tel" class="form-control" required>
             </div>
           </div>
         </div>
@@ -137,7 +137,7 @@
         <div class="field-ficha privado">
           <span class="clasif-badge privado" data-i18n="privacy_private">Privado</span>
           <label class="form-label" data-i18n="registration_delivery_address">Dirección de entrega (si difiere de la instalación oficial)</label>
-          <input type="text" id="direccionEntrega" class="form-control">
+          <input type="text" id="direccionEntrega" name="direccion_entrega" autocomplete="shipping street-address" class="form-control">
         </div>
 
         <h2 class="h6 text-uppercase text-muted mb-3 mt-4" style="letter-spacing:.08em;" data-i18n="registration_section_security">4. Verificación de seguridad</h2>
@@ -151,7 +151,7 @@
         <div class="field-ficha sensible">
           <span class="clasif-badge sensible" data-i18n="privacy_sensitive">Sensible</span>
           <label class="form-label" data-i18n="registration_background_check">Certificado o número de consulta de antecedentes judiciales del funcionario receptor</label>
-          <input type="text" id="numeroConsulta" class="form-control" placeholder="Número de consulta ante Policía Nacional / Procuraduría" data-i18n-placeholder="registration_background_placeholder">
+          <input type="text" id="numeroConsulta" name="numero_consulta" autocomplete="off" class="form-control" placeholder="Número de consulta ante Policía Nacional / Procuraduría" data-i18n-placeholder="registration_background_placeholder">
           <div class="form-text" data-i18n="registration_background_note">Requerido únicamente para pedidos que incluyan equipo táctico restringido (categoría "Equipo táctico" del catálogo).</div>
         </div>
 
@@ -177,7 +177,7 @@
         <div class="field-ficha privado">
           <span class="clasif-badge privado" data-i18n="privacy_private">Privado</span>
           <label class="form-label" data-i18n="registration_password">Contraseña de acceso</label>
-          <input type="password" id="password" class="form-control" minlength="8" required>
+          <input type="password" id="password" name="password" autocomplete="new-password" class="form-control" minlength="8" required>
           <div class="form-text" data-i18n="registration_password_note">Mínimo 8 caracteres. Se guarda cifrada de forma irreversible (hash), nunca en texto plano — ni siquiera el equipo de soporte puede verla.</div>
         </div>
 
@@ -244,17 +244,21 @@
     </div>
   </div>
 </div>
-
-<div id="chatbot-toggle" onclick="cbToggle()" title="Atención al cliente" data-i18n="chat_title">💬</div>
+<!-- Chatbot flotante -->
+<div id="chatbot-toggle" onclick="cbToggle()" title="Atención al cliente">
+  <i>💬</i>
+</div>
 <div id="chatbot-panel">
   <div class="cb-header">
     <span data-i18n="chat_title">Atención al cliente</span>
     <span style="cursor:pointer;" onclick="cbToggle()">✕</span>
   </div>
   <div class="cb-body" id="cb-body">
-    <div class="cb-msg bot" data-i18n="registration_chat_greeting">Hola, soy el asistente virtual. ¿Tienes dudas sobre el registro o el tratamiento de tus datos?</div>
+    <div class="cb-msg bot" data-i18n="chat_greeting">Hola, soy el asistente virtual de Suministros Institucionales. ¿En qué puedo ayudarte?</div>
   </div>
   <div class="cb-quick cb-quick-start">
+    <button data-q="¿Cuáles son los tiempos de entrega?" data-i18n="chat_quick1">Tiempos de entrega</button>
+    <button data-q="¿Qué métodos de pago aceptan?" data-i18n="chat_quick2">Métodos de pago</button>
     <button data-q="¿Cómo protegen mis datos?" data-i18n="chat_quick3">Protección de datos</button>
   </div>
   <div class="cb-input">
@@ -301,16 +305,30 @@ async function prepararModoAdministrativo() {
     ? 'Actualiza los datos del cliente seleccionado. Sus credenciales de acceso no se modificarán.'
     : 'Completa la ficha del cliente. Podrás crear sus credenciales de acceso por separado.';
 
-  document.querySelector('[data-i18n="registration_section_access"]').closest('h2').style.display = 'none';
-  document.getElementById('password').closest('.field-ficha').style.display = 'none';
-  document.getElementById('password').required = false;
-  document.getElementById('autorizacion').closest('.form-check').style.display = 'none';
-  document.getElementById('autorizacion').required = false;
+  const accesoSection = document.querySelector('[data-i18n="registration_section_access"]');
+  if (accesoSection && accesoSection.closest('h2')) accesoSection.closest('h2').style.display = 'none';
+  const passwordField = document.getElementById('password')?.closest('.field-ficha');
+  if (passwordField) passwordField.style.display = 'none';
+  const passwordInput = document.getElementById('password');
+  if (passwordInput) passwordInput.required = false;
+  const autorizacionCheck = document.getElementById('autorizacion');
+  if (autorizacionCheck) {
+    const autorizacionWrap = autorizacionCheck.closest('.form-check');
+    if (autorizacionWrap) autorizacionWrap.style.display = 'none';
+    autorizacionCheck.required = false;
+  }
   document.querySelector('.col-lg-4')?.style.setProperty('display', 'none');
   document.getElementById('chatbot-toggle')?.style.setProperty('display', 'none');
   document.getElementById('chatbot-panel')?.style.setProperty('display', 'none');
   btn.textContent = clienteEditarId ? 'Actualizar cliente' : 'Crear cliente';
   document.querySelector('header.hero').style.background = 'linear-gradient(135deg, #0f172a, #1e3a5f)';
+
+  const regresarAdmin = document.getElementById('nav-regresar-admin');
+  if (regresarAdmin) {
+    regresarAdmin.href = 'admin-dashboard.html';
+    regresarAdmin.textContent = '← Regresar al panel principal';
+    regresarAdmin.style.display = 'inline-flex';
+  }
 
   if (clienteEditarId) cargarClienteParaEditar(sesion, clienteEditarId);
 }
@@ -444,3 +462,4 @@ prepararModoAdministrativo();
 </script>
 </body>
 </html>
+atencion al cliente
