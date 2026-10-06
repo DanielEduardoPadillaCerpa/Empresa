@@ -271,7 +271,7 @@
 <script src="js/i18n.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/chatbot.js"></script>
-<script src="navbar.js"></script>
+<script src="js/navbar.js"></script>
 
 <script>
 const form = document.getElementById('form-registro');
@@ -372,7 +372,7 @@ form.addEventListener('submit', async function (e) {
     return;
   }
 
-  const apiBase = document.getElementById('apiBase').value.replace(/\/$/, '');
+  const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : 'http://localhost:8081').replace(/\/$/, '');
   const numeroConsulta = document.getElementById('numeroConsulta').value.trim();
   const autorizacionSensible = document.getElementById('autorizacion_sensible').checked;
   const correo = document.getElementById('correo').value;
@@ -443,11 +443,15 @@ form.addEventListener('submit', async function (e) {
     const datosAuth = await respAuth.json();
     if (!respAuth.ok) throw new Error(datosAuth.error || 'El cliente se registró, pero no se pudo crear el acceso');
 
-    // 4. Autologin: guarda la sesión y redirige (respeta ?redirect= si venía del carrito)
-    authGuardar({ token: datosAuth.token, correo: datosAuth.correo, clienteId: cliente.id, rol: datosAuth.rol });
-    mostrarMensaje('Cuenta creada correctamente. Redirigiendo...', 'success');
+    // Las cuentas nuevas deben completar MFA antes de recibir una sesión.
+    mostrarMensaje('Cuenta creada correctamente. Inicia sesión para verificar tu correo.', 'success');
     const params = new URLSearchParams(window.location.search);
-    setTimeout(() => { window.location.href = params.get('redirect') || 'index.html'; }, 1200);
+    const login = new URL('login.html', window.location.href);
+    login.searchParams.set('correo', correo);
+    login.searchParams.set('registro', 'completo');
+    if (params.has('redirect')) login.searchParams.set('redirect', params.get('redirect'));
+    btn.disabled = true;
+    setTimeout(() => { window.location.href = login.href; }, 1200);
   } catch (err) {
     mostrarMensaje(
       'No se pudo completar el registro. Verifica que el backend esté corriendo en ' + apiBase + '. Detalle: ' + err.message,

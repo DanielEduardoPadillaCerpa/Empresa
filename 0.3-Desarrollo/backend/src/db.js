@@ -236,7 +236,24 @@ async function migrar() {
       token_hash VARCHAR(255) NOT NULL,
       fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
       fecha_expiracion DATETIME NOT NULL,
+      mfa_verificado_en DATETIME NULL,
       revocado BOOLEAN DEFAULT FALSE,
+      FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS retos_mfa (
+      reto_id CHAR(64) PRIMARY KEY,
+      usuario_id INT NOT NULL,
+      codigo_hash CHAR(64) NOT NULL,
+      estado ENUM('pendiente','verificado','expirado','cancelado','bloqueado') NOT NULL DEFAULT 'pendiente',
+      intentos TINYINT UNSIGNED NOT NULL DEFAULT 0,
+      reenvios TINYINT UNSIGNED NOT NULL DEFAULT 0,
+      creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      enviado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      expira_en DATETIME NOT NULL,
+      INDEX idx_retos_mfa_usuario_estado (usuario_id, estado, expira_en),
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
@@ -297,8 +314,28 @@ async function migrar() {
   console.log('[db] Tablas verificadas/creadas correctamente.');
 
   await migrarColumnasFaltantes();
+  await migrarAutenticacionMfa();
   await sembrarCategoriasYProductos();
   await sembrarAdminPorDefecto();
+}
+
+async function migrarAutenticacionMfa() {
+  try {
+    await pool.query('ALTER TABLE refresh_tokens ADD COLUMN mfa_verificado_en DATETIME NULL');
+  } catch (err) {
+    if (!/duplicate column/i.test(err.message)) {
+      throw err;
+    }
+  }
+
+  try {
+    await pool.query('ALTER TABLE retos_mfa ADD COLUMN reenvios TINYINT UNSIGNED NOT NULL DEFAULT 0');
+  } catch (err) {
+    if (!/duplicate column/i.test(err.message)) {
+      throw err;
+    }
+  }
+
 }
 
 // Ajustes a instalaciones ya existentes (creadas antes de agregar estas

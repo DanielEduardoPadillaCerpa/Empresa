@@ -90,7 +90,8 @@ function authLeer() {
 }
 
 function authEstaLogueado() {
-  return !!authLeer()?.token;
+  const sesion = authLeer();
+  return !!sesion?.token && sesion.mfaVerified === true;
 }
 
 // Cierra sesión localmente y avisa al backend para revocar el refresh token
@@ -114,7 +115,7 @@ function authCerrarSesion() {
 function authRenderNavbar() {
   const slot = document.getElementById('auth-nav-slot');
   const sesion = authLeer();
-  const logueado = !!sesion?.correo;
+  const logueado = !!sesion?.correo && sesion?.mfaVerified === true;
   const esAdmin = !!(logueado && sesion?.rol === 'admin' &&
     (!sesion.expiraEn || Number(sesion.expiraEn) > Date.now()));
 
@@ -287,6 +288,11 @@ function authRequerirParaComprar(destinoSiLogueado) {
 async function authAsegurarTokenValido() {
   const sesion = authLeer();
   if (!sesion?.token) return false;
+  if (sesion.mfaVerified !== true) {
+    localStorage.removeItem(AUTH_KEY);
+    authRenderNavbar();
+    return false;
+  }
   if (authRenovacionEnCurso) return authRenovacionEnCurso;
 
   let expiraEn = Number(sesion.expiraEn) || 0;

@@ -31,13 +31,13 @@ function formatoMoneda(valor) {
 }
 
 function carritoGuardar(items) {
-  localStorage.setItem(CARRITO_KEY, JSON.stringify(Array.isArray(items) ? items : []));
+  localStorage.setItem(carritoKey(), JSON.stringify(Array.isArray(items) ? items : []));
   carritoActualizarBadge();
   carritoRenderPanel();
 }
 
 function carritoVaciar() {
-  localStorage.removeItem(CARRITO_KEY);
+  localStorage.removeItem(carritoKey());
   carritoActualizarBadge();
   carritoRenderPanel();
 }
