@@ -52,19 +52,29 @@ Con el backend corriendo, abre `frontend/registro.html` en el navegador, llena e
 
 | Método | Ruta | Uso |
 |---|---|---|
-| GET | `/api/clientes` | Lista todos los clientes |
-| GET | `/api/clientes/:id` | Ver un cliente |
-| POST | `/api/clientes` | Registrar cliente |
-| POST | `/api/clientes/:id/dato-sensible` | Registrar antecedentes judiciales (con consentimiento) |
-| POST | `/api/auth/registro` | Crear credenciales sin iniciar sesión automáticamente |
+| GET | `/api/clientes` | Lista todos los clientes (solo administrador) |
+| GET | `/api/clientes/:id` | Ver un cliente (solo administrador) |
+| POST | `/api/clientes` | Registrar cliente manualmente (solo administrador) |
+| POST | `/api/clientes/:id/dato-sensible` | Registrar antecedentes con JWT y consentimiento; cliente propio o administrador |
+| POST | `/api/auth/registro` | Crear cliente y credenciales en una transacción; no acepta `clienteId` ni autorización de compra restringida |
 | POST | `/api/auth/login` | Validar contraseña e iniciar verificación MFA |
 | POST | `/api/auth/mfa/verificar` | Verificar el código y emitir sesión |
 | POST | `/api/auth/mfa/reenviar` | Reenviar el código (60 s de espera; máximo cinco reenvíos) |
 | POST | `/api/auth/mfa/cancelar` | Cancelar un desafío pendiente |
 | POST | `/api/auth/refresh` | Renovar una sesión que ya completó MFA |
+| GET | `/api/mi-cuenta` | Consultar el perfil propio descifrado y autorización (JWT) |
+| PATCH | `/api/mi-cuenta` | Editar nombre, teléfono y direcciones permitidos (JWT) |
+| POST | `/api/mi-cuenta/correo/solicitar` | Solicitar cambio de correo y enviar código MFA al nuevo correo |
+| POST | `/api/mi-cuenta/correo/confirmar` | Confirmar el correo nuevo con código MFA; revoca las sesiones |
+| POST | `/api/mi-cuenta/password` | Cambiar contraseña con contraseña actual y MFA reciente |
+| POST | `/api/mi-cuenta/sesiones/cerrar-todas` | Revocar todas las sesiones propias |
+| POST | `/api/mi-cuenta/solicitud-cambio` | Solicitar corrección o eliminación de datos |
+| GET | `/api/mi-cuenta/solicitudes` | Listar solicitudes pendientes y resueltas (solo administrador) |
+| PATCH | `/api/mi-cuenta/solicitudes/:id` | Aprobar o rechazar una solicitud (solo administrador) |
 | POST | `/api/atencion/calificacion` | Registrar calificación del chatbot |
 | POST | `/api/atencion/mensaje` | Proxy del chatbot al workflow de n8n |
 | POST | `/api/checkout` | Crear pedido pendiente y reservar inventario (JWT e `Idempotency-Key`) |
+| GET | `/api/checkout/perfil` | Cargar los datos del cliente autenticado para prellenar el checkout |
 | POST | `/api/pagos/webhook/mock` | Aplicar un evento mock firmado |
 | POST | `/api/pagos/dev/simular-webhook` | Simular el resultado del proveedor mock (JWT) |
 | GET | `/api/pagos/:pedidoId/estado` | Consultar el pago propio |
@@ -75,6 +85,14 @@ Con el backend corriendo, abre `frontend/registro.html` en el navegador, llena e
 | POST | `/api/automatizaciones/pedidos/expirar` | Liberar reservas vencidas (token W4) |
 | POST | `/api/pedidos` | Retirado; los pedidos solo se crean mediante `/api/checkout` |
 | GET | `/api/reportes/mensual` | Reporte mensual (A, B, C) |
+
+El registro público crea en una sola transacción el cliente, el usuario y, si el formulario tiene consentimiento explícito, el dato sensible. Las cuentas existentes, sus contraseñas, vínculos y sesiones no se migran ni modifican; el cambio aplica al contrato de altas nuevas. El consentimiento de tratamiento del dato sensible no concede permiso para comprar equipo restringido: ese permiso permanece en `clientes.autorizacion_general` y solo un administrador lo concede mediante `PUT /api/clientes/:id`; ni el autorregistro ni `POST /api/clientes` lo activan.
+
+### Mi cuenta
+
+Todas las rutas `/api/mi-cuenta` requieren JWT válido con MFA completado y operan sobre el `cliente_id` firmado en la sesión; no aceptan un identificador de cliente para leer o editar perfiles. La edición acepta únicamente `nombreFuncionario`, `telefono`, `direccionEntrega` y `direccionInstalacion`. El correo se cambia con contraseña actual y un código de un solo uso enviado al correo nuevo; el cambio sincroniza `usuarios.correo` y `clientes.correo` en una transacción. Cambiar correo o contraseña, o cerrar todas las sesiones, revoca los refresh tokens e incrementa `usuarios.session_version` para invalidar también los access tokens.
+
+La migración idempotente añade `session_version`, el propósito/destino cifrado de los retos MFA, el cifrado en reposo del outbox de W8 y `solicitudes_cuenta`; no reescribe los datos ni las contraseñas existentes. Configura `MFA_TOKEN_PEPPER` y `CRYPTO_KEY` antes de desplegar. Los eventos W8 (`mfa.email.change.code`, `security.notice` y `admin.solicitud_cuenta`) se guardan cifrados y reintentan desde `automation_outbox`; hasta importar/configurar el workflow W8 de n8n, los códigos de cambio de correo no podrán entregarse y por tanto el correo no se cambiará.
 
 ## Integraciones: checkout mock y n8n
 
@@ -96,6 +114,8 @@ La prueba manual, que envía el código ficticio `123456` al correo indicado, se
 
 La respuesta contiene `pedido_id`, estado del pago, proveedor mock, `widget_token`, `widget_url` y expiración. El checkout web ofrece tres pasos: revisión del carrito, datos/método con preferencia de comprobante desmarcada y un modal de resultado. El navegador llama a `POST /api/pagos/dev/simular-webhook` con el ID del pedido; el resultado se determina en el servidor a partir de los centavos del importe: terminación `.01` rechaza, `.02` queda pendiente, `.03` simula timeout antes de reservar stock, y los demás importes se aprueban. El navegador no puede decidir el estado. Consulta el resultado con `GET /api/pagos/:pedidoId/estado`; solo el dueño puede consultarlo. El widget de una pasarela real permanece para la fase 5; el PDF y correo de comprobantes se implementaron en la fase 3.
 
+`GET /api/checkout/perfil` requiere una sesión JWT completada con MFA, obtiene únicamente el perfil asociado al `clienteId` autenticado y envía `Cache-Control: no-store`. La página de checkout rellena los campos vacíos, respeta cualquier dato que el comprador ya haya escrito y deja editar lo precargado. La dirección registrada se puede usar directamente; si se edita cualquier campo de dirección/ubicación, el checkout usa los campos editados. El esquema actual no contiene una cédula de persona natural ni ciudad/departamento separados, por lo que esos valores no se infieren ni se copian desde el NIT/dirección; deben completarse manualmente cuando falten. Si falla la carga del perfil, el formulario continúa disponible. y correo de comprobantes se implementaron en la fase 3.
+
 El proveedor genera webhooks con HMAC-SHA256 sobre `timestamp + "." + cuerpo HTTP raw`, usando `x-payment-timestamp` y `x-payment-signature`. El servidor rechaza firmas inválidas y marcas de tiempo con más de cinco minutos, deduplica por `event_id` y valida referencia, moneda e importe antes de actualizar el pedido. `POST /api/pedidos` y `/api/pagos/procesar` están retirados.
 
 ### n8n — Fase 4
@@ -107,10 +127,19 @@ Los workflows importables están en `../n8n/workflows/`:
 - `W3-alerta-stock-bajo.json`: recibe una alerta genérica cuando algún producto activo alcanza el umbral configurado; el flujo no recibe IDs ni nombres de productos.
 - `W4-expirar-pedidos.json`: cron cada minuto que invoca el endpoint protegido de expiración. El backend también ejecuta su propio job cada minuto, por lo que las reservas se liberan aunque n8n esté fuera de servicio.
 - `W5-mfa-email.json`: workflow independiente que entrega el código MFA del login; es el único workflow que recibe correo y OTP temporal. Tiene guardado de ejecuciones desactivado.
+- `W8-notificaciones-cuenta.json`: valida HMAC sobre el cuerpo raw y admite únicamente `mfa.email.change.code`, `security.notice` y `admin.solicitud_cuenta`. El aviso administrativo incluye solo ID y tipo; los eventos MFA y de seguridad contienen únicamente el correo necesario y, para el código de cambio, el OTP de un solo uso. El workflow no guarda ejecuciones y responde `502` si falla el envío SMTP, para que el outbox reintente.
 
-Importa cada JSON desde **Workflows → Import from File**, configura credenciales SMTP en los nodos Email Send y define en el entorno de n8n `BACKEND_BASE_URL`, `ADMIN_ALERT_FROM`, `ADMIN_ALERT_TO`, `MFA_FROM_EMAIL`, `N8N_W1_SECRET`, `N8N_W2_DAILY_SUMMARY_TOKEN`, `N8N_W3_SECRET` y `N8N_W4_EXPIRY_TOKEN`. El endpoint de backend debe usar HTTPS desde n8n. Para las funciones Code que verifican HMAC, permite el módulo integrado `crypto` (`NODE_FUNCTION_ALLOW_BUILTIN=crypto`). No actives los workflows hasta configurar sus credenciales y secretos.
+Importa cada JSON desde **Workflows → Import from File**, configura credenciales SMTP en los nodos Email Send y define en el entorno de n8n `BACKEND_BASE_URL`, `ADMIN_ALERT_FROM`, `ADMIN_ALERT_TO`, `MFA_FROM_EMAIL`, `N8N_W1_SECRET`, `N8N_W2_DAILY_SUMMARY_TOKEN`, `N8N_W3_SECRET`, `N8N_W4_EXPIRY_TOKEN` y `N8N_W8_ACCOUNT_SECRET`. El valor de `N8N_W8_ACCOUNT_SECRET` debe ser idéntico al de `N8N_W8_ACCOUNT_SECRET` en el `.env` del backend. Configura en este último `N8N_W8_ACCOUNT_WEBHOOK_URL` con la URL de producción del webhook `/webhook/account-events`. El endpoint de backend debe usar HTTPS desde n8n; solo se permite HTTP para localhost durante desarrollo. Para las funciones Code que verifican HMAC, permite el módulo integrado `crypto` (`NODE_FUNCTION_ALLOW_BUILTIN=crypto`). No actives los workflows hasta configurar sus credenciales y secretos.
 
-El backend encola W1 en la misma transacción que cambia el pedido a pagado/rechazado y firma el JSON canónico con HMAC-SHA256; los headers son `x-automation-timestamp` y `x-automation-signature`, con tolerancia de cinco minutos. W3 usa secreto independiente. La entrega tiene reintentos y backoff en `automation_outbox`; una caída de n8n no bloquea el checkout ni cambia el estado del pago. W2 recibe solo `{evento,total,moneda,fecha}`; W1 solo `{evento,pedido_id,estado,total,moneda,fecha}`; W3 solo `{evento,fecha}`. Ninguno recibe datos del comprador, tarjetas, OTP o tokens de sesión/pago. La excepción limitada es W5, que recibe exclusivamente el correo y el OTP temporal para entregarlo.
+#### Prueba manual de W8
+
+1. Importa W8, selecciona una credencial SMTP válida y configura las variables anteriores en n8n; usa un secreto aleatorio de al menos 32 caracteres y guarda el mismo únicamente en los entornos locales de backend y n8n. Reinicia ambos servicios y activa W8.
+2. Inicia sesión con MFA, solicita cambio de correo desde `/api/mi-cuenta/correo/solicitar` y confirma que el correo nuevo recibe el código. Confirma con `/api/mi-cuenta/correo/confirmar`, comprueba que se cierre la sesión actual, inicia sesión con el correo nuevo y verifica que el correo anterior reciba el aviso.
+3. Cambia la contraseña después de iniciar sesión nuevamente con MFA y confirma el aviso de seguridad. Envía una solicitud desde `/api/mi-cuenta/solicitud-cambio` y confirma que `ADMIN_ALERT_TO` reciba el tipo y el ID, sin nombre, correo, NIT ni detalle de la solicitud.
+4. Revisa el estado de `automation_outbox`: W8 debe quedar `enviado` si SMTP acepta el mensaje. Como prueba negativa, deshabilita temporalmente la credencial SMTP y crea un evento nuevo: no se debe completar el cambio de correo sin código; la cola debe reintentar. Restaura SMTP y vuelve a solicitar un código nuevo si el anterior venció.
+5. En **Executions**, confirma que no se conservaron ejecuciones exitosas, fallidas ni manuales. No pegues OTP, correos reales ni secretos en capturas o logs compartidos.
+
+El backend encola W1 en la misma transacción que cambia el pedido a pagado/rechazado y firma el JSON canónico con HMAC-SHA256; los headers son `x-automation-timestamp` y `x-automation-signature`, con tolerancia de cinco minutos. W3 usa secreto independiente. La entrega tiene reintentos y backoff en `automation_outbox`; una caída de n8n no bloquea el checkout ni cambia el estado del pago. W2 recibe solo `{evento,total,moneda,fecha}`; W1 solo `{evento,pedido_id,estado,total,moneda,fecha}`; W3 solo `{evento,fecha}`. W5 recibe exclusivamente correo y OTP temporal de inicio de sesión. W8 envía un código temporal al correo nuevo o avisos de seguridad al correo anterior; el evento administrativo contiene únicamente ID y tipo de solicitud.
 
 El resumen de ventas requiere `N8N_W2_DAILY_SUMMARY_TOKEN`; la expiración remota requiere `N8N_W4_EXPIRY_TOKEN`, ambos distintos y comparados en tiempo constante. W2 devuelve `total` como una cadena de centavos enteros. La expiración local cambia pedido y pago a vencidos, y libera inventario en una misma transacción con actualización condicional para no duplicar stock. El umbral de stock se lee de `AUTOMATION_STOCK_LOW_THRESHOLD`; se emite como máximo una alerta genérica al día.
 
@@ -123,6 +152,22 @@ La fase mock no constituye una pasarela de producción ni realiza cobros reales.
 Solo un evento de pago aprobado crea, dentro de la misma transacción, un comprobante no-DIAN y sus tareas de correo. Siempre se encola un aviso administrativo sin datos personales; solo se encola el mensaje al cliente si `enviarComprobante` fue `true` en el checkout. El cliente recibe un enlace PDF firmado con HMAC y vencimiento a 24 horas, nunca un adjunto. El endpoint de reenvío exige JWT del dueño y limita a tres solicitudes por hora. `correo_outbox` conserva el estado/reintentos y ejecuta backoff si falla SMTP; una falla de correo no altera ni revierte el pago.
 
 Configura `ADMIN_NOTIFICATION_EMAIL`, `RECEIPT_LINK_SECRET` y `RECEIPT_LINK_BASE_URL` junto con SMTP. El enlace base debe ser HTTPS en producción (HTTP se permite solo para localhost). No envíes datos de compradores ni enlaces firmados a n8n. SPF, DKIM y DMARC deben configurarse con el proveedor de correo.
+
+El envío del comprobante se realiza desde este backend con Nodemailer; n8n no recibe el correo del cliente ni el enlace firmado. Para usar la misma cuenta Gmail configurada en n8n, habilita la verificación en dos pasos de Google y crea una contraseña de aplicación para el backend (no uses la contraseña normal de Gmail). En el `.env` local del backend configura:
+
+```dotenv
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=cuenta-remitente@gmail.com
+SMTP_PASSWORD=contraseña-de-aplicación-de-google
+SMTP_FROM=cuenta-remitente@gmail.com
+ADMIN_NOTIFICATION_EMAIL=correo-administrativo@empresa.com
+RECEIPT_LINK_BASE_URL=http://localhost:8081
+RECEIPT_LINK_SECRET=secreto-aleatorio-de-al-menos-32-caracteres
+```
+
+`SMTP_FROM` puede omitirse para usar `SMTP_USER`. Genera el secreto del enlace en una terminal local con `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`; no lo pegues en el frontend, n8n ni Git. En producción cambia `RECEIPT_LINK_BASE_URL` por el dominio HTTPS público del backend. Reinicia el backend después de cambiar el `.env`. El worker procesa la cola automáticamente, reintenta con espera creciente hasta cinco veces y registra solo códigos de error; si la tarea aún está pendiente, se retomará cuando la configuración esté completa.
 
 ## 7. Nota de seguridad
 

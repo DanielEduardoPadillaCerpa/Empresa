@@ -19,7 +19,7 @@ if (!Number.isSafeInteger(saltosProxy) || saltosProxy < 0) {
 app.set('trust proxy', saltosProxy);
 const origenesPermitidos = new Set(
   (process.env.CORS_ORIGINS ||
-    'http://localhost:5500,http://127.0.0.1:5500,http://localhost:8081,http://127.0.0.1:8081')
+    'http://localhost:5500,http://127.0.0.1:5500,http://localhost:8765,http://127.0.0.1:8765,http://localhost:8081,http://127.0.0.1:8081')
     .split(',')
     .map(origen => origen.trim())
     .filter(Boolean)
@@ -49,6 +49,7 @@ app.use('/api/checkout', require('./src/routes/checkout'));
 app.use('/api/pagos', require('./src/routes/pagos').router);
 app.use('/api/comprobantes', require('./src/routes/comprobantes'));
 app.use('/api/automatizaciones', require('./src/routes/automatizaciones'));
+app.use('/api/mi-cuenta', require('./src/routes/miCuenta'));
 app.use('/api/reportes', require('./src/routes/reportes'));
 app.use('/api/auth', require('./src/routes/auth').router);
 app.use('/api/pedidos', require('./src/routes/pedidos'));

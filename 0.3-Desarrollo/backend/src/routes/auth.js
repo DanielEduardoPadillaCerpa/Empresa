@@ -5,7 +5,9 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { rateLimit } = require('express-rate-limit');
 const { pool } = require('../db');
+const { cifrar } = require('../crypto');
 const { enviarCodigoMfaN8n } = require('../mfaCourier');
+const { hashCodigoMfa, compararHashesMfa, generarCodigoMfa } = require('../mfaCodes');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'cambia-este-secreto';
 const JWT_EXPIRA = process.env.JWT_EXPIRES_IN || '2h';
@@ -41,26 +43,6 @@ const MFA_REENVIO_ESPERA_SEGUNDOS = 60;
 const MFA_REENVIO_MAXIMOS = 5;
 const MFA_REINTENTOS_LOGIN_VENTANA_MINUTOS = 15;
 const MFA_REINTENTOS_LOGIN_MAXIMOS = 5;
-
-function hashCodigoMfa(retoId, usuarioId, codigo) {
-  const pepper = process.env.MFA_TOKEN_PEPPER || '';
-  if (pepper.length < 32 || pepper.startsWith('replace_')) {
-    throw new Error('MFA_TOKEN_PEPPER debe configurarse con al menos 32 caracteres aleatorios');
-  }
-  return crypto.createHmac('sha256', pepper)
-    .update(`${retoId}:${usuarioId}:${codigo}`)
-    .digest('hex');
-}
-
-function compararHashesMfa(hashA, hashB) {
-  const bufferA = Buffer.from(hashA, 'hex');
-  const bufferB = Buffer.from(hashB, 'hex');
-  return bufferA.length === bufferB.length && crypto.timingSafeEqual(bufferA, bufferB);
-}
-
-function generarCodigoMfa() {
-  return crypto.randomInt(0, 1000000).toString().padStart(6, '0');
-}
 
 function enmascararCorreo(correo) {
   const [nombre, dominio] = String(correo).split('@');
@@ -110,7 +92,8 @@ async function crearRetoMfa(usuario) {
   const [intentos] = await pool.query(
     `SELECT COUNT(*) AS cantidad
      FROM retos_mfa
-     WHERE usuario_id = ? AND creado_en >= DATE_SUB(NOW(), INTERVAL ? MINUTE)`,
+     WHERE usuario_id = ? AND proposito = 'inicio_sesion'
+       AND creado_en >= DATE_SUB(NOW(), INTERVAL ? MINUTE)`,
     [usuario.id, MFA_REINTENTOS_LOGIN_VENTANA_MINUTOS]
   );
   if (Number(intentos[0].cantidad) >= MFA_REINTENTOS_LOGIN_MAXIMOS) {
@@ -128,7 +111,7 @@ async function crearRetoMfa(usuario) {
     await connection.beginTransaction();
     await connection.query('SELECT id FROM usuarios WHERE id = ? FOR UPDATE', [usuario.id]);
     await connection.query(
-      "UPDATE retos_mfa SET estado = 'cancelado' WHERE usuario_id = ? AND estado = 'pendiente'",
+      "UPDATE retos_mfa SET estado = 'cancelado' WHERE usuario_id = ? AND proposito = 'inicio_sesion' AND estado = 'pendiente'",
       [usuario.id]
     );
     await connection.query(
@@ -165,43 +148,107 @@ async function crearRetoMfa(usuario) {
   return { retoId, correoEnmascarado: enmascararCorreo(usuario.correo) };
 }
 
-// POST /api/auth/registro -> crea las credenciales de acceso (correo + contraseña)
-// Nota: el correo aquí se guarda en texto plano porque se usa como identificador
-// único de login (índice UNIQUE). Es distinto del correo cifrado que se guarda
-// en la tabla "clientes" como dato privado del funcionario.
-router.post('/registro', async (req, res) => {
-  try {
-    const correo = String(req.body?.correo || '').trim().toLowerCase();
-    const { password, clienteId } = req.body || {};
+const CAMPOS_REGISTRO = new Set([
+  'nombreUnidad',
+  'direccionInstalacion',
+  'nit',
+  'nombreFuncionario',
+  'correo',
+  'telefono',
+  'direccionEntrega',
+  'numeroConsultaAntecedentes',
+  'autorizacionSensible',
+  'password'
+]);
 
-    if (!correo || typeof password !== 'string' || !password) {
-      return res.status(400).json({ error: 'Correo y contraseña son obligatorios' });
+// Crea en una sola transacción la ficha y sus credenciales. El rol y la
+// autorización de compra restringida nunca se toman del navegador.
+router.post('/registro', async (req, res) => {
+  let connection;
+  try {
+    const body = req.body || {};
+    if (Object.keys(body).some(campo => !CAMPOS_REGISTRO.has(campo))) {
+      return res.status(400).json({ error: 'El registro contiene campos no permitidos.' });
+    }
+    const correo = typeof body.correo === 'string' ? body.correo.trim().toLowerCase() : '';
+    const password = body.password;
+    const nombreUnidad = typeof body.nombreUnidad === 'string' ? body.nombreUnidad.trim() : '';
+    const direccionInstalacion = typeof body.direccionInstalacion === 'string' ? body.direccionInstalacion.trim() : '';
+    const nit = typeof body.nit === 'string' ? body.nit.trim() : '';
+    const nombreFuncionario = typeof body.nombreFuncionario === 'string' ? body.nombreFuncionario.trim() : '';
+    const telefono = typeof body.telefono === 'string' ? body.telefono.trim() : '';
+    const direccionEntrega = typeof body.direccionEntrega === 'string' ? body.direccionEntrega.trim() : '';
+    const numeroConsultaAntecedentes = typeof body.numeroConsultaAntecedentes === 'string'
+      ? body.numeroConsultaAntecedentes.trim()
+      : '';
+    const autorizacionSensible = body.autorizacionSensible === true;
+
+    if (!correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo) ||
+        typeof password !== 'string' || !password ||
+        !nombreUnidad || !direccionInstalacion || !nit || !nombreFuncionario) {
+      return res.status(400).json({ error: 'Completa los datos obligatorios del registro.' });
     }
     if (password.length < 8) {
       return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
     }
-
-    const [existente] = await pool.query('SELECT id FROM usuarios WHERE correo = ?', [correo]);
-    if (existente.length) {
-      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+    if (body.autorizacionSensible !== undefined && typeof body.autorizacionSensible !== 'boolean') {
+      return res.status(400).json({ error: 'La autorización de tratamiento no es válida.' });
     }
-
     const hash = await bcrypt.hash(password, 10);
-    const [resultado] = await pool.query(
-      'INSERT INTO usuarios (correo, password_hash, cliente_id) VALUES (?, ?, ?)',
-      [correo, hash, clienteId || null]
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [cliente] = await connection.query(
+      `INSERT INTO clientes
+        (nombre_unidad, direccion_instalacion, nit, nombre_funcionario, correo,
+         telefono, direccion_entrega, autorizacion_general)
+       VALUES (?, ?, ?, ?, ?, ?, ?, FALSE)`,
+      [
+        nombreUnidad,
+        direccionInstalacion,
+        nit,
+        cifrar(nombreFuncionario),
+        cifrar(correo),
+        cifrar(telefono),
+        cifrar(direccionEntrega)
+      ]
     );
+    const [usuario] = await connection.query(
+      'INSERT INTO usuarios (correo, password_hash, cliente_id, rol) VALUES (?, ?, ?, ?)',
+      [correo, hash, cliente.insertId, 'cliente']
+    );
+    if (autorizacionSensible && numeroConsultaAntecedentes) {
+      await connection.query(
+        `INSERT INTO datos_sensibles
+          (cliente_id, numero_consulta_antecedentes, autorizacion_sensible)
+         VALUES (?, ?, TRUE)`,
+        [cliente.insertId, cifrar(numeroConsultaAntecedentes)]
+      );
+    }
+    await connection.commit();
 
     res.status(201).json({
       ok: true,
       correo,
-      id: resultado.insertId,
-      clienteId: clienteId || null,
+      id: usuario.insertId,
+      clienteId: cliente.insertId,
       rol: 'cliente'
     });
   } catch (err) {
-    console.error(err);
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error('[auth] No se pudo revertir el registro:', rollbackError.code || 'REGISTRATION_ROLLBACK_FAILED');
+      }
+    }
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: 'No se pudo crear la cuenta con esos datos.' });
+    }
+    console.error('[auth] No se pudo crear la cuenta:', err.code || 'REGISTRATION_FAILED');
     res.status(500).json({ error: 'Error creando la cuenta' });
+  } finally {
+    if (connection) connection.release();
   }
 });
 
@@ -253,12 +300,12 @@ router.post('/mfa/verificar', limitarVerificacionMfa, async (req, res) => {
     connection = await pool.getConnection();
     await connection.beginTransaction();
     const [retos] = await connection.query(
-      `SELECT r.usuario_id, r.codigo_hash, r.estado, r.intentos,
+      `SELECT r.usuario_id, r.codigo_hash, r.estado, r.intentos, r.proposito,
               (r.expira_en > NOW()) AS vigente,
-              u.correo, u.rol, u.cliente_id
+              u.correo, u.rol, u.cliente_id, u.session_version
        FROM retos_mfa r
        JOIN usuarios u ON u.id = r.usuario_id
-       WHERE r.reto_id = ?
+       WHERE r.reto_id = ? AND r.proposito = 'inicio_sesion'
        FOR UPDATE`,
       [retoId]
     );
@@ -315,6 +362,7 @@ router.post('/mfa/verificar', limitarVerificacionMfa, async (req, res) => {
       correo: reto.correo,
       rol: reto.rol,
       clienteId: reto.cliente_id,
+      sv: Number(reto.session_version || 0),
       mfa: true
     });
     const refreshToken = await generarRefreshToken(reto.usuario_id, connection, ahora);
@@ -358,7 +406,7 @@ router.post('/mfa/reenviar', limitarReenvioMfa, async (req, res) => {
               u.correo
        FROM retos_mfa r
        JOIN usuarios u ON u.id = r.usuario_id
-       WHERE r.reto_id = ?`,
+       WHERE r.reto_id = ? AND r.proposito = 'inicio_sesion'`,
       [MFA_REENVIO_ESPERA_SEGUNDOS, MFA_REENVIO_MAXIMOS, retoId]
     );
     if (!retos.length || retos[0].estado !== 'pendiente' || !retos[0].vigente) {
@@ -393,7 +441,7 @@ router.post('/mfa/reenviar', limitarReenvioMfa, async (req, res) => {
         codigo
       });
     } catch (err) {
-      await pool.query("UPDATE retos_mfa SET estado = 'cancelado' WHERE reto_id = ? AND estado = 'pendiente'", [retoId]);
+      await pool.query("UPDATE retos_mfa SET estado = 'cancelado' WHERE reto_id = ? AND proposito = 'inicio_sesion' AND estado = 'pendiente'", [retoId]);
       console.error('[auth] No se pudo reenviar el código MFA:', err.code || 'EMAIL_DELIVERY_FAILED');
       return res.status(503).json({ error: 'No fue posible reenviar el código. Inicia sesión nuevamente más tarde.' });
     }
@@ -416,7 +464,7 @@ router.post('/mfa/cancelar', async (req, res) => {
   }
   try {
     await pool.query(
-      "UPDATE retos_mfa SET estado = 'cancelado' WHERE reto_id = ? AND estado = 'pendiente'",
+      "UPDATE retos_mfa SET estado = 'cancelado' WHERE reto_id = ? AND proposito = 'inicio_sesion' AND estado = 'pendiente'",
       [retoId]
     );
     res.json({ ok: true });
@@ -439,7 +487,7 @@ router.post('/refresh', async (req, res) => {
     const hash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     const [filas] = await pool.query(
       `SELECT rt.id, rt.usuario_id, rt.fecha_expiracion, rt.mfa_verificado_en,
-              u.correo, u.rol, u.cliente_id
+              u.correo, u.rol, u.cliente_id, u.session_version
        FROM refresh_tokens rt
        JOIN usuarios u ON u.id = rt.usuario_id
        WHERE rt.token_hash = ? AND rt.revocado = FALSE`,
@@ -468,6 +516,7 @@ router.post('/refresh', async (req, res) => {
       correo: registro.correo,
       rol: registro.rol,
       clienteId: registro.cliente_id,
+      sv: Number(registro.session_version || 0),
       mfa: true
     });
 
@@ -502,18 +551,40 @@ router.post('/logout', async (req, res) => {
 });
 
 // Middleware exportado para proteger otras rutas
-function requiereAutenticacion(req, res, next) {
+async function requiereAutenticacion(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'No autenticado' });
+  let usuario;
   try {
-    req.usuario = jwt.verify(token, JWT_SECRET);
-    if (req.usuario.mfa !== true) {
-      return res.status(401).json({ error: 'Inicia sesión nuevamente para completar la verificación de seguridad.' });
-    }
-    next();
+    usuario = jwt.verify(token, JWT_SECRET);
   } catch {
-    res.status(401).json({ error: 'Sesión inválida o expirada' });
+    return res.status(401).json({ error: 'Sesión inválida o expirada' });
+  }
+  if (usuario.mfa !== true) {
+    return res.status(401).json({ error: 'Inicia sesión nuevamente para completar la verificación de seguridad.' });
+  }
+
+  const usuarioId = Number(usuario.uid);
+  const versionToken = Number(usuario.sv || 0);
+  if (!Number.isSafeInteger(usuarioId) || usuarioId < 1 ||
+      !Number.isSafeInteger(versionToken) || versionToken < 0) {
+    return res.status(401).json({ error: 'Sesión inválida o expirada' });
+  }
+
+  try {
+    const [filas] = await pool.query(
+      'SELECT session_version FROM usuarios WHERE id = ?',
+      [usuarioId]
+    );
+    if (!filas.length || Number(filas[0].session_version || 0) !== versionToken) {
+      return res.status(401).json({ error: 'La sesión fue revocada. Inicia sesión nuevamente.' });
+    }
+    req.usuario = usuario;
+    return next();
+  } catch (err) {
+    console.error('[auth] No se pudo validar la versión de sesión:', err.code || 'SESSION_VERSION_CHECK_FAILED');
+    return res.status(503).json({ error: 'No fue posible validar la sesión temporalmente.' });
   }
 }
 

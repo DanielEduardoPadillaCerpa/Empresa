@@ -51,13 +51,12 @@ router.get('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
   }
 });
 
-// POST /api/clientes -> registra un nuevo cliente
-router.post('/', async (req, res) => {
+// POST /api/clientes -> alta administrativa de clientes sin credenciales.
+router.post('/', requiereAutenticacion, requiereAdmin, async (req, res) => {
   try {
     const {
       nombreUnidad, direccionInstalacion, nit,
-      nombreFuncionario, correo, telefono, direccionEntrega,
-      autorizacionGeneral
+      nombreFuncionario, correo, telefono, direccionEntrega
     } = req.body;
 
     if (!nombreUnidad || !nit || !nombreFuncionario || !correo) {
@@ -67,7 +66,7 @@ router.post('/', async (req, res) => {
     const [resultado] = await pool.query(
       `INSERT INTO clientes
         (nombre_unidad, direccion_instalacion, nit, nombre_funcionario, correo, telefono, direccion_entrega, autorizacion_general)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, FALSE)`,
       [
         nombreUnidad,
         direccionInstalacion,
@@ -76,12 +75,11 @@ router.post('/', async (req, res) => {
         cifrar(correo),
         cifrar(telefono),
         cifrar(direccionEntrega),
-        !!autorizacionGeneral,
       ]
     );
 
     await registrarAuditoria({
-      usuario: req.usuario, // puede ser undefined si el registro es público (autoregistro)
+      usuario: req.usuario,
       accion: 'crear',
       entidad: 'cliente',
       entidadId: resultado.insertId,
@@ -90,7 +88,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({ id: resultado.insertId, nombreUnidad, nit });
   } catch (err) {
-    console.error(err);
+    console.error('[clientes] No se pudo registrar el cliente:', err.code || 'CLIENT_CREATE_FAILED');
     res.status(500).json({ error: 'Error registrando cliente' });
   }
 });
@@ -165,12 +163,23 @@ router.delete('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => 
 });
 
 // POST /api/clientes/:id/dato-sensible -> registra antecedentes judiciales con consentimiento separado
-router.post('/:id/dato-sensible', async (req, res) => {
+router.post('/:id/dato-sensible', requiereAutenticacion, async (req, res) => {
   try {
     const { numeroConsultaAntecedentes, autorizacionSensible } = req.body;
+    const clienteId = Number(req.params.id);
+    const esAdmin = req.usuario?.rol === 'admin';
 
     if (!autorizacionSensible) {
       return res.status(400).json({ error: 'No se puede guardar un dato sensible sin autorización expresa' });
+    }
+    if (!Number.isSafeInteger(clienteId) || clienteId < 1) {
+      return res.status(400).json({ error: 'Identificador de cliente inválido.' });
+    }
+    if (!esAdmin && Number(req.usuario?.clienteId) !== clienteId) {
+      return res.status(403).json({ error: 'No tienes permiso para registrar datos de este cliente.' });
+    }
+    if (typeof numeroConsultaAntecedentes !== 'string' || !numeroConsultaAntecedentes.trim()) {
+      return res.status(400).json({ error: 'El dato sensible es obligatorio.' });
     }
 
     const [cliente] = await pool.query('SELECT id FROM clientes WHERE id = ?', [req.params.id]);
@@ -179,12 +188,12 @@ router.post('/:id/dato-sensible', async (req, res) => {
     const [resultado] = await pool.query(
       `INSERT INTO datos_sensibles (cliente_id, numero_consulta_antecedentes, autorizacion_sensible)
        VALUES (?, ?, ?)`,
-      [req.params.id, cifrar(numeroConsultaAntecedentes), true]
+      [clienteId, cifrar(numeroConsultaAntecedentes.trim()), true]
     );
 
-    res.status(201).json({ id: resultado.insertId, clienteId: Number(req.params.id) });
+    res.status(201).json({ id: resultado.insertId, clienteId });
   } catch (err) {
-    console.error(err);
+    console.error('[clientes] No se pudo registrar el dato sensible:', err.code || 'SENSITIVE_DATA_CREATE_FAILED');
     res.status(500).json({ error: 'Error registrando dato sensible' });
   }
 });

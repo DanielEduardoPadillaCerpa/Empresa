@@ -1,11 +1,22 @@
 const crypto = require('crypto');
 const express = require('express');
 const router = express.Router();
+const { rateLimit } = require('express-rate-limit');
 const { pool } = require('../db');
-const { cifrar } = require('../crypto');
+const { cifrar, descifrar } = require('../crypto');
 const { requiereAutenticacion } = require('./auth');
 const { getPaymentProvider } = require('../paymentProviderInstance');
 const { invalidarIndiceCatalogo } = require('../assistant/indiceCatalogo');
+
+const limitarPerfilCheckout = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({
+    error: 'Demasiadas solicitudes. Espera un minuto e inténtalo de nuevo.'
+  })
+});
 
 const CAMPOS_COMPRADOR = new Set([
   'tipo',
@@ -77,6 +88,62 @@ function respuestaCheckout(pago) {
     expira_en: pago.expira_en
   };
 }
+
+router.get('/perfil', requiereAutenticacion, limitarPerfilCheckout, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    const clienteId = parsearIdentificador(req.usuario?.clienteId);
+    if (!clienteId) {
+      return res.status(403).json({ error: 'La cuenta no está vinculada a un perfil de cliente.' });
+    }
+
+    const [filas] = await pool.query(
+      `SELECT c.id, c.nombre_unidad, c.nit, c.nombre_funcionario,
+              c.correo, c.telefono, c.direccion_entrega,
+              c.autorizacion_general AS autorizacion_restringidos
+       FROM clientes c
+       WHERE c.id = ?
+       LIMIT 1`,
+      [clienteId]
+    );
+    if (!filas.length) {
+      return res.status(404).json({ error: 'No se encontró el perfil asociado a esta cuenta.' });
+    }
+
+    const fila = filas[0];
+    const nit = descifrar(fila.nit);
+    const nombre = descifrar(fila.nombre_funcionario);
+    const razonSocial = fila.nombre_unidad || '';
+    const telefono = descifrar(fila.telefono);
+    const correo = descifrar(fila.correo);
+    const direccionEntrega = descifrar(fila.direccion_entrega);
+    const cliente = {
+      nombre: nombre || '',
+      razonSocial: razonSocial || '',
+      tipoDocumento: nit ? 'NIT' : '',
+      documento: nit || '',
+      telefono: telefono || '',
+      correo: correo || '',
+      direccionEntrega: direccionEntrega || ''
+    };
+    const faltantes = Object.entries(cliente)
+      .filter(([, valor]) => !valor)
+      .map(([campo]) => campo);
+
+    return res.json({
+      cliente,
+      direcciones: direccionEntrega
+        ? [{ id: 'perfil', alias: 'Dirección registrada', direccion: direccionEntrega }]
+        : [],
+      predeterminadaId: direccionEntrega ? 'perfil' : null,
+      faltantes,
+      autorizacionRestringidos: Boolean(fila.autorizacion_restringidos)
+    });
+  } catch (error) {
+    console.error('[checkout] No se pudo cargar el perfil de compra:', error.code || 'CHECKOUT_PROFILE_FAILED');
+    return res.status(500).json({ error: 'No fue posible cargar los datos del perfil.' });
+  }
+});
 
 async function buscarPagoPorIdempotencia(idempotencyKey, clienteId, requestHash) {
   const [filas] = await pool.query(

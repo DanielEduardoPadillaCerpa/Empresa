@@ -31,7 +31,10 @@
   },
   "jest": {
     "testMatch": [
-      "**/test/assistant.spec.js"
+      "**/test/assistant.spec.js",
+      "**/test/account-registration-phase0.spec.js",
+      "**/test/mi-cuenta.spec.js",
+      "**/test/db-account-migration.spec.js"
     ]
   }
 }

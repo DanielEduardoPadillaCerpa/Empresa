@@ -265,21 +265,22 @@
         </div>
 
         <div id="checkout-error" class="alert alert-danger small mb-3" style="display:none;" role="alert"></div>
+        <div id="checkout-perfil-estado" class="alert alert-info small mb-3" style="display:none;" role="status" aria-live="polite"></div>
 
         <!-- Campos Persona Natural -->
         <div id="campos-identificacion-natural">
           <div class="mb-2">
-            <label class="form-label small">Cédula de ciudadanía</label>
+          <label class="form-label small" for="rutNitNat">Cédula de ciudadanía</label>
             <input type="text" id="rutNitNat" class="form-control" placeholder="Número de identificación" autocomplete="off">
           </div>
           <div class="row g-2">
             <div class="col-md-6">
-              <label class="form-label small">Nombre Completo</label>
-              <input type="text" id="nombreCompletoNat" class="form-control" placeholder="Nombre y apellido">
+              <label class="form-label small" for="nombreCompletoNat">Nombre Completo</label>
+              <input type="text" id="nombreCompletoNat" class="form-control" placeholder="Nombre y apellido" autocomplete="name">
             </div>
             <div class="col-md-6">
-              <label class="form-label small">Teléfono de Contacto</label>
-              <input type="text" id="telefonoContactoNat" class="form-control" placeholder="(300) 000 0000">
+              <label class="form-label small" for="telefonoContactoNat">Teléfono de Contacto</label>
+              <input type="text" id="telefonoContactoNat" class="form-control" placeholder="(300) 000 0000" autocomplete="tel">
             </div>
           </div>
         </div>
@@ -288,22 +289,22 @@
         <div id="campos-identificacion-empresa" style="display:none;">
           <div class="row g-2 mb-2">
             <div class="col-md-6">
-              <label class="form-label small">Razón Social</label>
+              <label class="form-label small" for="empresaRazonSocial">Razón Social</label>
               <input type="text" id="empresaRazonSocial" class="form-control" placeholder="Empresa de Suministros S.A.S.">
             </div>
             <div class="col-md-6">
-              <label class="form-label small">NIT</label>
+              <label class="form-label small" for="empresaNit">NIT</label>
               <input type="text" id="empresaNit" class="form-control" placeholder="900.123.456-7">
             </div>
           </div>
           <div class="row g-2">
             <div class="col-md-6">
-              <label class="form-label small">Comprador Autorizado</label>
-              <input type="text" id="empresaComprador" class="form-control" placeholder="Nombre y apellido">
+              <label class="form-label small" for="empresaComprador">Comprador Autorizado</label>
+              <input type="text" id="empresaComprador" class="form-control" placeholder="Nombre y apellido" autocomplete="name">
             </div>
             <div class="col-md-6">
-              <label class="form-label small">Teléfono de Contacto</label>
-              <input type="text" id="empresaTelefono" class="form-control" placeholder="(601) 000 0000">
+              <label class="form-label small" for="empresaTelefono">Teléfono de Contacto</label>
+              <input type="text" id="empresaTelefono" class="form-control" placeholder="(601) 000 0000" autocomplete="tel">
             </div>
           </div>
         </div>
@@ -312,6 +313,15 @@
       <!-- Tarjeta 2: Dirección de envío y contacto -->
       <div class="tarjeta-form">
         <div class="tarjeta-form-titulo">Dirección de Envío y Contacto</div>
+        <div class="mb-3">
+          <label class="form-label small" for="checkoutCorreo">Correo de contacto</label>
+          <input type="email" id="checkoutCorreo" class="form-control" autocomplete="email">
+        </div>
+        <div id="checkout-direccion-guardada" class="alert alert-light border small" style="display:none;">
+          <div><strong>Dirección registrada en tu perfil</strong></div>
+          <div id="checkout-direccion-guardada-texto" class="my-2"></div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="checkout-usar-direccion-guardada">Usar esta dirección</button>
+        </div>
 
         <div id="direccion-natural">
           <div class="row g-2 mb-2">
@@ -322,8 +332,8 @@
               </select>
             </div>
             <div class="col-md-4">
-              <label class="form-label small">Departamento/Estado</label>
-              <select id="departamentoNat" class="form-select">
+              <label class="form-label small" for="departamentoNat">Departamento/Estado</label>
+              <select id="departamentoNat" class="form-select" autocomplete="address-level1">
                 <option value="">— Selecciona —</option>
                 <option>Bogotá D.C.</option>
                 <option>Antioquia</option>
@@ -334,14 +344,14 @@
               </select>
             </div>
             <div class="col-md-4">
-              <label class="form-label small">Ciudad</label>
-              <input type="text" id="ciudadNat" class="form-control" placeholder="Bogotá">
+              <label class="form-label small" for="ciudadNat">Ciudad</label>
+              <input type="text" id="ciudadNat" class="form-control" placeholder="Bogotá" autocomplete="address-level2">
             </div>
           </div>
           <div class="row g-2">
             <div class="col-md-8">
-              <label class="form-label small">Dirección Exacta (Calle, Carrera, N°)</label>
-              <input type="text" id="direccionExactaNat" class="form-control" placeholder="Cra 7 # 32-16">
+              <label class="form-label small" for="direccionExactaNat">Dirección Exacta (Calle, Carrera, N°)</label>
+              <input type="text" id="direccionExactaNat" class="form-control" placeholder="Cra 7 # 32-16" autocomplete="street-address">
             </div>
             <div class="col-md-4">
               <label class="form-label small">Apto/Interior (Opcional)</label>
@@ -359,8 +369,8 @@
               </select>
             </div>
             <div class="col-md-4">
-              <label class="form-label small">Departamento/Estado</label>
-              <select id="departamentoEmp" class="form-select">
+              <label class="form-label small" for="departamentoEmp">Departamento/Estado</label>
+              <select id="departamentoEmp" class="form-select" autocomplete="address-level1">
                 <option value="">— Selecciona —</option>
                 <option>Bogotá D.C.</option>
                 <option>Antioquia</option>
@@ -371,14 +381,14 @@
               </select>
             </div>
             <div class="col-md-4">
-              <label class="form-label small">Ciudad</label>
-              <input type="text" id="ciudadEmp" class="form-control" placeholder="Bogotá">
+              <label class="form-label small" for="ciudadEmp">Ciudad</label>
+              <input type="text" id="ciudadEmp" class="form-control" placeholder="Bogotá" autocomplete="address-level2">
             </div>
           </div>
           <div class="row g-2">
             <div class="col-md-8">
-              <label class="form-label small">Dirección Exacta de la Instalación</label>
-              <input type="text" id="direccionExactaEmp" class="form-control" placeholder="Cra 7 # 32-16">
+              <label class="form-label small" for="direccionExactaEmp">Dirección Exacta de la Instalación</label>
+              <input type="text" id="direccionExactaEmp" class="form-control" placeholder="Cra 7 # 32-16" autocomplete="street-address">
             </div>
             <div class="col-md-4">
               <label class="form-label small">Apto/Interior (Opcional)</label>
@@ -502,6 +512,7 @@
 <script src="js/auth.js"></script>
 <script src="js/cart.js"></script>
 <script src="js/i18n.js"></script>
+<script src="js/checkout-autofill.js"></script>
 
 <script>
 /* ═══════════════════════════════════════════════════════
@@ -561,6 +572,7 @@ let metodoEmpresa = null;
 let solicitudEnCurso = false;
 let pedidoPendienteActivo = false;
 let contextoPedidoActual = null;
+let direccionSeleccionadaPerfil = '';
 const CHECKOUT_KEY_STORAGE = 'si_checkout_idempotency_key';
 const CHECKOUT_PEDIDO_STORAGE = 'si_checkout_pedido_id';
 
@@ -596,11 +608,17 @@ function seleccionarTipoComprador(tipo) {
   renderCarritoCheckout();
 
   const sesion = authLeer();
-  if (sesion?.direccionEntrega) {
-    document.getElementById('direccionExactaNat').value = sesion.direccionEntrega;
-  }
-  if (sesion?.nombre) document.getElementById('nombreCompletoNat').value = sesion.nombre;
-  if (sesion?.nombre) document.getElementById('empresaComprador').value = sesion.nombre;
+  CheckoutAutofill.inicializar({
+    apiBase: API_BASE,
+    token: sesion?.token,
+    estado: document.getElementById('checkout-perfil-estado'),
+    seleccionarTipoComprador,
+    seleccionarDireccionGuardada(direccion) {
+      direccionSeleccionadaPerfil = direccion;
+      document.getElementById('checkout-perfil-estado').textContent =
+        'Usaremos la dirección registrada tal como aparece arriba. Puedes cambiarla ingresando los datos de ubicación y otra dirección.';
+    }
+  });
 })();
 
 function renderCarritoCheckout() {
@@ -704,6 +722,7 @@ document.querySelectorAll('.metodo-fila[data-grupo="empresa"]').forEach(fila => 
 
 // ── Dirección según tipo de comprador ─────────────────
 function obtenerDireccion() {
+  if (direccionSeleccionadaPerfil) return direccionSeleccionadaPerfil;
   if (tipoComprador === 'natural') {
     const direccionExacta = document.getElementById('direccionExactaNat').value.trim();
     const ciudad = document.getElementById('ciudadNat').value.trim();
@@ -725,6 +744,20 @@ function obtenerDireccion() {
   if (!departamento)    { mostrarError('Selecciona el departamento/estado.'); return null; }
   return `${direccionExacta}${apto ? ', ' + apto : ''}, ${ciudad}, ${departamento}, ${pais}`;
 }
+
+[
+  'direccionExactaNat', 'ciudadNat', 'departamentoNat', 'aptoNat',
+  'direccionExactaEmp', 'ciudadEmp', 'departamentoEmp', 'aptoEmp'
+].forEach(id => {
+  const campo = document.getElementById(id);
+  const elegirDireccionEditada = () => {
+    direccionSeleccionadaPerfil = '';
+    const boton = document.getElementById('checkout-usar-direccion-guardada');
+    if (boton) boton.textContent = 'Usar esta dirección';
+  };
+  campo.addEventListener('input', elegirDireccionEditada);
+  campo.addEventListener('change', elegirDireccionEditada);
+});
 
 function validarDatosComprador() {
   if (tipoComprador === 'natural') {
@@ -756,13 +789,15 @@ function obtenerDatosComprador() {
     tipo: 'persona_natural',
     identificacion: document.getElementById('rutNitNat').value.trim(),
     nombre: document.getElementById('nombreCompletoNat').value.trim(),
-    telefono: document.getElementById('telefonoContactoNat').value.trim()
+    telefono: document.getElementById('telefonoContactoNat').value.trim(),
+    correo: document.getElementById('checkoutCorreo').value.trim()
   } : {
     tipo: 'empresa',
     razonSocial: document.getElementById('empresaRazonSocial').value.trim(),
     nit: document.getElementById('empresaNit').value.trim(),
     nombreComprador: document.getElementById('empresaComprador').value.trim(),
-    telefono: document.getElementById('empresaTelefono').value.trim()
+    telefono: document.getElementById('empresaTelefono').value.trim(),
+    correo: document.getElementById('checkoutCorreo').value.trim()
   };
 }
 

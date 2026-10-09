@@ -1,0 +1,110 @@
+{
+  "name": "W8 - Seguridad y solicitudes de cuenta",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "account-events",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "c6cc6ca9-9a5b-45ca-9fc8-036f87080001",
+      "name": "Webhook W8 firmado",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "account-events"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst item = $input.first();\nconst headers = item.json.headers || {};\nconst rawBody = item.json.body;\nif (typeof rawBody !== 'string') throw new Error('Raw Body must be enabled on the Webhook node');\nconst timestamp = String(headers['x-automation-timestamp'] || '');\nconst received = String(headers['x-automation-signature'] || '');\nconst secret = process.env.N8N_W8_ACCOUNT_SECRET || '';\nif (secret.length < 32 || !/^\\d{10}$/.test(timestamp) || !/^[a-f0-9]{64}$/i.test(received)) throw new Error('Invalid webhook configuration');\nif (Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp)) > 300) throw new Error('Expired webhook signature');\nconst expected = crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');\nconst a = Buffer.from(received, 'hex');\nconst b = Buffer.from(expected, 'hex');\nif (a.length !== b.length || !crypto.timingSafeEqual(a, b)) throw new Error('Invalid webhook signature');\nconst payload = JSON.parse(rawBody);\nconst escapeHtml = value => String(value).replace(/[&<>\"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[character]);\nconst validEmail = value => /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value || ''));\nconst validDate = value => typeof value === 'string' && Number.isFinite(Date.parse(value));\nconst exactKeys = expectedKeys => Object.keys(payload).sort().join(',') === expectedKeys.slice().sort().join(',');\nconst makeMail = (from, to, subject, title, message, extra = '') => ({ json: { from, to, subject, html: `<div style=\"font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px\"><h2 style=\"color:#0f172a\">${title}</h2><p style=\"color:#475569\">${message}</p>${extra}<p style=\"color:#64748b;font-size:13px\">Si no realizaste esta acción, comunícate con el administrador de tu cuenta.</p></div>` } });\nif (payload.evento === 'mfa.email.change.code') {\n  if (!exactKeys(['evento', 'email', 'token_mfa', 'timestamp', 'vigencia_segundos']) || !validEmail(payload.email) || !/^\\d{6}$/.test(String(payload.token_mfa || '')) || !validDate(payload.timestamp) || !Number.isInteger(payload.vigencia_segundos) || payload.vigencia_segundos < 1 || payload.vigencia_segundos > 300) throw new Error('Invalid email change code event');\n  const edad = Date.now() - Date.parse(payload.timestamp);\n  if (edad < -60000 || edad > payload.vigencia_segundos * 1000) throw new Error('Expired email change code');\n  const minutos = Math.max(1, Math.ceil((payload.vigencia_segundos * 1000 - Math.max(0, edad)) / 60000));\n  const codigo = escapeHtml(payload.token_mfa);\n  const extra = `<p style=\"font-size:34px;letter-spacing:8px;font-weight:700;text-align:center;margin:24px 0;color:#0d4f9c\">${codigo}</p><p>El código vence en ${minutos} minutos. No lo compartas con nadie.</p>`;\n  return [makeMail(process.env.MFA_FROM_EMAIL || '', payload.email, 'Confirma el cambio de correo', 'Código para cambiar tu correo', 'Ingresa este código en el sitio para confirmar el nuevo correo.', extra)];\n}\nif (payload.evento === 'security.notice') {\n  if (!exactKeys(['evento', 'email', 'tipo', 'timestamp']) || !validEmail(payload.email) || !validDate(payload.timestamp) || !['correo_cambiado', 'password_cambiada'].includes(payload.tipo)) throw new Error('Invalid security notice event');\n  const cambioCorreo = payload.tipo === 'correo_cambiado';\n  const title = cambioCorreo ? 'Correo actualizado' : 'Contraseña actualizada';\n  const message = cambioCorreo ? 'Se confirmó un cambio de correo en tu cuenta.' : 'Se cambió la contraseña de tu cuenta.';\n  return [makeMail(process.env.MFA_FROM_EMAIL || '', payload.email, title, title, message)];\n}\nif (payload.evento === 'admin.solicitud_cuenta') {\n  if (!exactKeys(['evento', 'solicitud_id', 'tipo', 'timestamp']) || !Number.isSafeInteger(payload.solicitud_id) || payload.solicitud_id < 1 || !['nit', 'nombreUnidad', 'eliminacion', 'correccion'].includes(payload.tipo) || !validDate(payload.timestamp)) throw new Error('Invalid account request event');\n  const tipos = { nit: 'actualización de NIT', nombreUnidad: 'actualización del nombre de unidad', eliminacion: 'solicitud de eliminación', correccion: 'solicitud de corrección' };\n  const from = process.env.ADMIN_ALERT_FROM || '';\n  const to = process.env.ADMIN_ALERT_TO || '';\n  if (!validEmail(from) || !validEmail(to)) throw new Error('Admin email configuration is invalid');\n  return [makeMail(from, to, 'Nueva solicitud de cuenta', 'Solicitud de cuenta pendiente', `Hay una solicitud de tipo ${tipos[payload.tipo]}.`, `<p>Solicitud ID: ${payload.solicitud_id}</p><p>Revisa los detalles en el panel administrativo.</p>`)];\n}\nthrow new Error('Event not allowed');"
+      },
+      "id": "c6cc6ca9-9a5b-45ca-9fc8-036f87080002",
+      "name": "Validar firma y preparar aviso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$json.from}}",
+        "toEmail": "={{$json.to}}",
+        "subject": "={{$json.subject}}",
+        "emailFormat": "html",
+        "html": "={{$json.html}}",
+        "options": {}
+      },
+      "id": "c6cc6ca9-9a5b-45ca-9fc8-036f87080003",
+      "name": "Enviar correo seguro",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [520, 0],
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "SMTP para cuenta"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "c6cc6ca9-9a5b-45ca-9fc8-036f87080004",
+      "name": "Responder enviado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [780, -80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":false}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "c6cc6ca9-9a5b-45ca-9fc8-036f87080005",
+      "name": "Responder fallo SMTP",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [780, 100]
+    }
+  ],
+  "connections": {
+    "Webhook W8 firmado": {
+      "main": [[{"node": "Validar firma y preparar aviso", "type": "main", "index": 0}]]
+    },
+    "Validar firma y preparar aviso": {
+      "main": [[{"node": "Enviar correo seguro", "type": "main", "index": 0}]]
+    },
+    "Enviar correo seguro": {
+      "main": [
+        [{"node": "Responder enviado", "type": "main", "index": 0}],
+        [{"node": "Responder fallo SMTP", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false
+  },
+  "active": false,
+  "versionId": "c6cc6ca9-9a5b-45ca-9fc8-036f87080006",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

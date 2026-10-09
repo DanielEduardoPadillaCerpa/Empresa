@@ -33,6 +33,8 @@ const {
 const { inferirIntencion, obtenerUrlOllama } = require('../src/assistant/llmAdapter');
 const { router: asistenteRouter } = require('../src/routes/asistente');
 const atencionRouter = require('../src/routes/atencion');
+const checkoutRouter = require('../src/routes/checkout');
+const checkoutAutofill = require('../../frontend/js/checkout-autofill');
 const { mapearProducto } = require('../src/assistant/indiceCatalogo');
 const indiceReal = jest.requireActual('../src/assistant/indiceCatalogo');
 
@@ -78,7 +80,10 @@ function clienteApi(router) {
 
 beforeEach(() => {
   indice.obtenerIndice.mockResolvedValue(catalogo);
-  pool.query.mockReset().mockResolvedValue([{ insertId: 1, affectedRows: 1 }, []]);
+  pool.query.mockReset().mockImplementation(async sql => {
+    if (/SELECT session_version FROM usuarios/i.test(String(sql))) return [[{ session_version: 0 }], []];
+    return [{ insertId: 1, affectedRows: 1 }, []];
+  });
 });
 
 describe('motor reglas e índice inyectado', () => {
@@ -274,6 +279,113 @@ describe('API del asistente y aislamiento de datos', () => {
     expect(respuesta.status).toBe(400);
   });
 
+  describe('autocompletado seguro del perfil de checkout', () => {
+    test('perfil checkout requiere JWT, usa solo clienteId autenticado y responde no-store', async () => {
+      const token = jwt.sign({ uid: 10, clienteId: 7, mfa: true }, process.env.JWT_SECRET);
+      pool.query.mockImplementation(async sql => {
+        if (/SELECT session_version FROM usuarios/i.test(String(sql))) return [[{ session_version: 0 }], []];
+        return [[
+          {
+            id: 7,
+            nombre_unidad: 'Empresa de prueba',
+            nit: '900123456-7',
+            nombre_funcionario: 'Comprador de prueba',
+            correo: 'compras@example.test',
+            telefono: '3001234567',
+            direccion_entrega: 'Cra 15 # 82-45, Bogotá, Bogotá D.C., Colombia',
+            autorizacion_restringidos: 1
+          }
+        ], []];
+      });
+      const app = express();
+      app.use('/api/checkout', checkoutRouter);
+
+      const sinSesion = await request(app).get('/api/checkout/perfil');
+      expect(sinSesion.status).toBe(401);
+
+      const respuesta = await request(app)
+        .get('/api/checkout/perfil')
+        .set('Authorization', `Bearer ${token}`);
+      expect(respuesta.status).toBe(200);
+      expect(respuesta.headers['cache-control']).toBe('no-store');
+      expect(respuesta.body.cliente).toMatchObject({
+        nombre: 'Comprador de prueba',
+        razonSocial: 'Empresa de prueba',
+        tipoDocumento: 'NIT',
+        documento: '900123456-7',
+        telefono: '3001234567',
+        correo: 'compras@example.test'
+      });
+      expect(respuesta.body.autorizacionRestringidos).toBe(true);
+      expect(pool.query).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE c.id = ?'),
+        [7]
+      );
+      const queryPerfil = pool.query.mock.calls.find(([sql]) => String(sql).includes('WHERE c.id = ?'));
+      expect(String(queryPerfil[0])).not.toMatch(/req\.query|req\.body/);
+    });
+
+    test('autocompleta solo campos vacíos y conserva dirección como texto seguro', async () => {
+      document.body.innerHTML = `
+        <div id="status"></div>
+        <label for="nombreCompletoNat">Nombre</label><input id="nombreCompletoNat" value="Nombre escrito">
+        <label for="empresaComprador">Comprador</label><input id="empresaComprador">
+        <label for="empresaRazonSocial">Empresa</label><input id="empresaRazonSocial">
+        <label for="empresaNit">NIT</label><input id="empresaNit">
+        <label for="rutNitNat">CC</label><input id="rutNitNat">
+        <label for="telefonoContactoNat">Teléfono</label><input id="telefonoContactoNat">
+        <label for="empresaTelefono">Teléfono empresa</label><input id="empresaTelefono">
+        <label for="checkoutCorreo">Correo</label><input id="checkoutCorreo">
+        <div id="checkout-direccion-guardada" style="display:none"><span id="checkout-direccion-guardada-texto"></span><button id="checkout-usar-direccion-guardada"></button></div>`;
+      const fetchAnterior = global.fetch;
+      global.fetch = jest.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          cliente: {
+            nombre: '<img src=x onerror=alert(1)>',
+            razonSocial: 'Empresa',
+            tipoDocumento: 'NIT',
+            documento: '900123456-7',
+            telefono: '3001234567',
+            correo: 'compras@example.test',
+            direccionEntrega: '<img src=x>'
+          },
+          direcciones: [{ id: 'perfil', alias: 'Dirección registrada', direccion: '<img src=x>' }],
+          predeterminadaId: 'perfil',
+          autorizacionRestringidos: true
+        })
+      }));
+      const tipoSeleccionado = jest.fn();
+      const direccionSeleccionada = jest.fn();
+      try {
+        await checkoutAutofill.inicializar({
+          apiBase: 'http://localhost:8081/',
+          token: 'test-jwt',
+          estado: document.getElementById('status'),
+          seleccionarTipoComprador: tipoSeleccionado,
+          seleccionarDireccionGuardada: direccionSeleccionada
+        });
+        expect(document.getElementById('nombreCompletoNat').value).toBe('Nombre escrito');
+        expect(document.getElementById('empresaComprador').value).toBe('<img src=x onerror=alert(1)>');
+        expect(document.getElementById('empresaNit').value).toBe('900123456-7');
+        expect(document.getElementById('rutNitNat').value).toBe('');
+        expect(tipoSeleccionado).toHaveBeenCalledWith('empresa');
+        expect(document.getElementById('checkout-direccion-guardada-texto').textContent).toBe('<img src=x>');
+        expect(document.querySelector('#checkout-direccion-guardada img')).toBeNull();
+        expect(direccionSeleccionada).toHaveBeenCalledWith('<img src=x>');
+        document.getElementById('checkout-usar-direccion-guardada').click();
+        expect(direccionSeleccionada).toHaveBeenCalledTimes(2);
+        expect(global.fetch).toHaveBeenCalledWith(
+          'http://localhost:8081/api/checkout/perfil',
+          expect.objectContaining({ cache: 'no-store' })
+        );
+      } finally {
+        global.fetch = fetchAnterior;
+      }
+    });
+  });
+
   test('limita a 20 mensajes por minuto por IP', async () => {
     const app = express();
     app.set('trust proxy', 1);
@@ -299,6 +411,9 @@ describe('API del asistente y aislamiento de datos', () => {
   test('el estado consulta únicamente pedidos del cliente autenticado', async () => {
     const token = jwt.sign({ uid: 10, clienteId: 7, mfa: true }, process.env.JWT_SECRET);
     pool.query.mockImplementation(async (sql, params) => {
+      if (String(sql).includes('SELECT session_version FROM usuarios')) {
+        return [[{ session_version: 0 }], []];
+      }
       if (String(sql).includes('WHERE cliente_id = ?')) {
         const pedidos = [
           { id: 101, cliente_id: 7, estado: 'pagado', fecha_pedido: new Date('2025-01-02T00:00:00Z') },

@@ -215,6 +215,7 @@ async function migrar() {
       correo VARCHAR(255) NOT NULL UNIQUE,
       password_hash VARCHAR(255) NOT NULL,
       cliente_id INT,
+      session_version INT UNSIGNED NOT NULL DEFAULT 0,
       rol ENUM('cliente','admin') DEFAULT 'cliente',
       fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
@@ -246,6 +247,8 @@ async function migrar() {
       creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       enviado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       expira_en DATETIME NOT NULL,
+      proposito ENUM('inicio_sesion','cambio_correo') NOT NULL DEFAULT 'inicio_sesion',
+      correo_destino_cifrado TEXT NULL,
       INDEX idx_retos_mfa_usuario_estado (usuario_id, estado, expira_en),
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -349,9 +352,10 @@ async function migrar() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS automation_outbox (
       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      workflow ENUM('W1','W3','W6') NOT NULL,
+      workflow ENUM('W1','W3','W6','W8') NOT NULL,
       dedupe_key VARCHAR(191) NOT NULL UNIQUE,
       payload JSON NOT NULL,
+      payload_cifrado BOOLEAN NOT NULL DEFAULT FALSE,
       estado ENUM('pendiente','procesando','enviado','fallido') NOT NULL DEFAULT 'pendiente',
       intentos TINYINT UNSIGNED NOT NULL DEFAULT 0,
       disponible_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -363,7 +367,7 @@ async function migrar() {
   `);
 
   await pool.query(
-    "ALTER TABLE automation_outbox MODIFY workflow ENUM('W1','W3','W6') NOT NULL"
+    "ALTER TABLE automation_outbox MODIFY workflow ENUM('W1','W3','W6','W8') NOT NULL"
   );
 
   await pool.query(`
@@ -445,6 +449,7 @@ async function migrar() {
 
   await migrarColumnasFaltantes();
   await migrarAutenticacionMfa();
+  await migrarCuentaSegura();
   await sembrarCategoriasYProductos();
   await sembrarAdminPorDefecto();
 }
@@ -466,6 +471,45 @@ async function migrarAutenticacionMfa() {
     }
   }
 
+}
+
+async function migrarCuentaSegura() {
+  for (const [tabla, columna, definicion] of [
+    ['usuarios', 'session_version', 'INT UNSIGNED NOT NULL DEFAULT 0'],
+    ['retos_mfa', 'proposito', "ENUM('inicio_sesion','cambio_correo') NOT NULL DEFAULT 'inicio_sesion'"],
+    ['retos_mfa', 'correo_destino_cifrado', 'TEXT NULL'],
+    ['automation_outbox', 'payload_cifrado', 'BOOLEAN NOT NULL DEFAULT FALSE']
+  ]) {
+    try {
+      await pool.query(`ALTER TABLE ${tabla} ADD COLUMN ${columna} ${definicion}`);
+    } catch (err) {
+      if (!/duplicate column/i.test(err.message)) throw err;
+    }
+  }
+
+  await pool.query(
+    "ALTER TABLE automation_outbox MODIFY workflow ENUM('W1','W3','W6','W8') NOT NULL"
+  );
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS solicitudes_cuenta (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      usuario_id INT NOT NULL,
+      cliente_id INT NOT NULL,
+      campo ENUM('nit','nombreUnidad','eliminacion','correccion') NOT NULL,
+      detalle TEXT NOT NULL,
+      estado ENUM('pendiente','aprobada','rechazada') NOT NULL DEFAULT 'pendiente',
+      resuelta_por INT NULL,
+      respuesta_admin VARCHAR(500) NULL,
+      creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      resuelta_en DATETIME NULL,
+      INDEX idx_solicitudes_cuenta_estado (estado, creado_en, id),
+      INDEX idx_solicitudes_cuenta_cliente (cliente_id, creado_en),
+      FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+      FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE,
+      FOREIGN KEY (resuelta_por) REFERENCES usuarios(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
 }
 
 // Ajustes a instalaciones ya existentes (creadas antes de agregar estas
@@ -578,4 +622,4 @@ async function sembrarAdminPorDefecto() {
   console.log('==============================================================');
 }
 
-module.exports = { pool, migrar };
+module.exports = { pool, migrar, migrarCuentaSegura };

@@ -1,5 +1,6 @@
 const { pool } = require('./db');
 const { firmarPayload } = require('./automationSignatures');
+const { descifrar } = require('./crypto');
 
 const MAX_INTENTOS = 8;
 const INTERVALO_MS = 5000;
@@ -21,6 +22,10 @@ const WORKFLOWS = {
     url: 'N8N_W6_ASSISTANT_ESCALATION_WEBHOOK_URL',
     secret: 'N8N_W6_ASSISTANT_ESCALATION_SECRET',
     tokenHeader: true
+  },
+  W8: {
+    url: 'N8N_W8_ACCOUNT_WEBHOOK_URL',
+    secret: 'N8N_W8_ACCOUNT_SECRET'
   }
 };
 
@@ -58,7 +63,7 @@ async function reclamarEvento() {
        WHERE estado = 'procesando' AND actualizado_en < DATE_SUB(NOW(), INTERVAL 2 MINUTE)`
     );
     const [filas] = await connection.query(
-      `SELECT id, workflow, payload, intentos
+      `SELECT id, workflow, payload, payload_cifrado, intentos
        FROM automation_outbox
        WHERE estado = 'pendiente' AND disponible_en <= NOW()
        ORDER BY id LIMIT 1 FOR UPDATE`
@@ -96,10 +101,16 @@ async function enviarEvento(evento) {
     throw error;
   }
   const url = obtenerUrlSegura(process.env[configuracion.url]);
-  const firmado = firmarPayload(
-    typeof evento.payload === 'string' ? JSON.parse(evento.payload) : evento.payload,
-    process.env[configuracion.secret]
-  );
+  let payload = typeof evento.payload === 'string' ? JSON.parse(evento.payload) : evento.payload;
+  if (evento.payload_cifrado) {
+    if (!payload || typeof payload.contenido !== 'string') {
+      const error = new Error('AUTOMATION_ENCRYPTED_PAYLOAD_INVALID');
+      error.code = 'AUTOMATION_ENCRYPTED_PAYLOAD_INVALID';
+      throw error;
+    }
+    payload = JSON.parse(descifrar(payload.contenido));
+  }
+  const firmado = firmarPayload(payload, process.env[configuracion.secret]);
   const controlador = new AbortController();
   const timeout = setTimeout(() => controlador.abort(), TIMEOUT_MS);
   try {

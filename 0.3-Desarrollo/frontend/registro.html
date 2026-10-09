@@ -384,11 +384,18 @@ form.addEventListener('submit', async function (e) {
     direccionInstalacion: document.getElementById('direccionInstalacion').value,
     nit: document.getElementById('nit').value,
     nombreFuncionario: document.getElementById('nombreFuncionario').value,
-    correo: correo,
+    correo,
     telefono: document.getElementById('telefono').value,
-    direccionEntrega: document.getElementById('direccionEntrega').value,
-    autorizacionGeneral: document.getElementById('autorizacion').checked
+    direccionEntrega: document.getElementById('direccionEntrega').value
   };
+
+  if (modoAdmin) {
+    payload.autorizacionGeneral = document.getElementById('autorizacion').checked;
+  } else {
+    payload.numeroConsultaAntecedentes = numeroConsulta;
+    payload.autorizacionSensible = autorizacionSensible;
+    payload.password = password;
+  }
 
   btn.disabled = true;
   btn.textContent = clienteEditarId ? 'Actualizando...' : (modoAdmin ? 'Creando...' : 'Registrando...');
@@ -416,32 +423,14 @@ form.addEventListener('submit', async function (e) {
       return;
     }
 
-    // 1. Registrar los datos del cliente (institucionales)
-    const respCliente = await fetch(apiBase + '/api/clientes', {
+    // Cliente y credenciales se crean en una sola transacción del servidor.
+    const respRegistro = await fetch(apiBase + '/api/auth/registro', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (!respCliente.ok) throw new Error('El servidor respondió con error ' + respCliente.status);
-    const cliente = await respCliente.json();
-
-    // 2. Registrar el dato sensible (antecedentes), solo si autorizó
-    if (autorizacionSensible && numeroConsulta) {
-      await fetch(apiBase + '/api/clientes/' + cliente.id + '/dato-sensible', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ numeroConsultaAntecedentes: numeroConsulta, autorizacionSensible: true })
-      });
-    }
-
-    // 3. Crear la cuenta de acceso (correo + contraseña) vinculada al cliente
-    const respAuth = await fetch(apiBase + '/api/auth/registro', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ correo, password, clienteId: cliente.id })
-    });
-    const datosAuth = await respAuth.json();
-    if (!respAuth.ok) throw new Error(datosAuth.error || 'El cliente se registró, pero no se pudo crear el acceso');
+    const datosRegistro = await respRegistro.json().catch(() => ({}));
+    if (!respRegistro.ok) throw new Error(datosRegistro.error || 'No se pudo completar el registro.');
 
     // Las cuentas nuevas deben completar MFA antes de recibir una sesión.
     mostrarMensaje('Cuenta creada correctamente. Inicia sesión para verificar tu correo.', 'success');

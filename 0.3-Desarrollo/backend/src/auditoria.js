@@ -20,8 +20,23 @@ async function registrarAuditoria({ usuario, accion, entidad, entidadId, detalle
       ]
     );
   } catch (err) {
-    console.error('[auditoria] No se pudo registrar la acción:', err.message);
+    console.error('[auditoria] No se pudo registrar la acción:', err.code || 'AUDIT_INSERT_FAILED');
   }
 }
 
-module.exports = { registrarAuditoria };
+async function registrarAuditoriaTransaccional(connection, { usuario, accion, entidad, entidadId, detalle }) {
+  await connection.query(
+    `INSERT INTO auditoria (usuario_id, correo, accion, entidad, entidad_id, detalle)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      usuario?.uid || null,
+      usuario?.correo || null,
+      accion,
+      entidad,
+      entidadId !== undefined && entidadId !== null ? String(entidadId) : null,
+      detalle ? JSON.stringify(detalle) : null,
+    ]
+  );
+}
+
+module.exports = { registrarAuditoria, registrarAuditoriaTransaccional };
