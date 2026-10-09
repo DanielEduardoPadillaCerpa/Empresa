@@ -3,7 +3,9 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { rateLimit } = require('express-rate-limit');
 const { pool } = require('../db');
+const { enviarCodigoMfaN8n } = require('../mfaCourier');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'cambia-este-secreto';
 const JWT_EXPIRA = process.env.JWT_EXPIRES_IN || '2h';
@@ -67,58 +69,42 @@ function enmascararCorreo(correo) {
   return `${prefijo}${'*'.repeat(Math.max(2, nombre.length - prefijo.length))}@${dominio}`;
 }
 
-function obtenerWebhookMfa() {
-  const webhook = process.env.N8N_MFA_WEBHOOK_URL;
-  const secreto = process.env.N8N_MFA_WEBHOOK_SECRET;
-  if (!webhook || !secreto || secreto.startsWith('replace_')) {
-    throw new Error('La entrega MFA requiere N8N_MFA_WEBHOOK_URL y N8N_MFA_WEBHOOK_SECRET');
-  }
-
-  let url;
-  try {
-    url = new URL(webhook);
-  } catch {
-    throw new Error('N8N_MFA_WEBHOOK_URL no es una URL válida');
-  }
-  const localhost = ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
-  if (url.protocol !== 'https:' && !(localhost && url.protocol === 'http:')) {
-    throw new Error('El webhook MFA debe usar HTTPS');
-  }
-  if (url.username || url.password) {
-    throw new Error('No incluyas credenciales dentro de la URL del webhook MFA');
-  }
-  return { url: url.toString(), secreto };
+async function enviarCodigoMfa({ correo, codigo }) {
+  await enviarCodigoMfaN8n({
+    correo,
+    codigo,
+    vigenciaMinutos: MFA_CODIGO_VIGENCIA_MINUTOS
+  });
 }
 
-async function enviarCodigoMfa({ usuarioId, correo, retoId, codigo }) {
-  const { url, secreto } = obtenerWebhookMfa();
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${secreto}`
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        event: 'mfa.login.code',
-        email: correo,
-        token_mfa: codigo,
-        timestamp: new Date().toISOString(),
-        user_id: usuarioId,
-        challenge_id: retoId,
-        expires_in_seconds: MFA_CODIGO_VIGENCIA_MINUTOS * 60
-      })
-    });
-    if (!response.ok) {
-      throw new Error(`Webhook MFA respondió HTTP ${response.status}`);
-    }
-  } finally {
-    clearTimeout(timeout);
-  }
+function crearLimitadorMfa({ ventanaMs, limite, mensaje }) {
+  return rateLimit({
+    windowMs: ventanaMs,
+    limit: limite,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => res.status(429).json({
+      code: 'RATE_LIMITED',
+      error: mensaje
+    })
+  });
 }
+
+const limitarLogin = crearLimitadorMfa({
+  ventanaMs: 15 * 60 * 1000,
+  limite: 10,
+  mensaje: 'Demasiados intentos desde esta conexión. Espera 15 minutos e inténtalo de nuevo.'
+});
+const limitarVerificacionMfa = crearLimitadorMfa({
+  ventanaMs: 15 * 60 * 1000,
+  limite: 15,
+  mensaje: 'Demasiadas verificaciones desde esta conexión. Espera 15 minutos e inténtalo de nuevo.'
+});
+const limitarReenvioMfa = crearLimitadorMfa({
+  ventanaMs: 60 * 60 * 1000,
+  limite: 10,
+  mensaje: 'Se alcanzó el límite temporal de reenvíos desde esta conexión. Inténtalo más tarde.'
+});
 
 async function crearRetoMfa(usuario) {
   const [intentos] = await pool.query(
@@ -159,13 +145,18 @@ async function crearRetoMfa(usuario) {
   }
 
   try {
-    await enviarCodigoMfa({ usuarioId: usuario.id, correo: usuario.correo, retoId, codigo });
+    await enviarCodigoMfa({ correo: usuario.correo, codigo });
   } catch (err) {
-    await pool.query(
-      "UPDATE retos_mfa SET estado = 'cancelado' WHERE reto_id = ? AND estado = 'pendiente'",
-      [retoId]
-    );
-    console.error('[auth] No se pudo enviar el código MFA:', err.message);
+    try {
+      const [eliminacion] = await pool.query('DELETE FROM retos_mfa WHERE reto_id = ?', [retoId]);
+      if (eliminacion.affectedRows !== 1) throw new Error('MFA_CHALLENGE_CLEANUP_FAILED');
+    } catch (errorLimpieza) {
+      console.error('[auth] No se pudo borrar el reto MFA sin entregar:', errorLimpieza.code || 'MFA_CHALLENGE_CLEANUP_FAILED');
+      const error = new Error('No fue posible completar el envío del código. Intenta iniciar sesión nuevamente más tarde.');
+      error.status = 503;
+      throw error;
+    }
+    console.error('[auth] No se pudo enviar el código MFA:', err.code || 'EMAIL_DELIVERY_FAILED');
     const error = new Error('No fue posible enviar el código de seguridad. Intenta iniciar sesión nuevamente más tarde.');
     error.status = 503;
     throw error;
@@ -215,7 +206,7 @@ router.post('/registro', async (req, res) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', limitarLogin, async (req, res) => {
   try {
     const correo = String(req.body?.correo || '').trim().toLowerCase();
     const { password } = req.body || {};
@@ -250,7 +241,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/mfa/verificar', async (req, res) => {
+router.post('/mfa/verificar', limitarVerificacionMfa, async (req, res) => {
   const retoId = String(req.body?.challengeId || '');
   const codigo = String(req.body?.code || '');
   if (!/^[a-f0-9]{64}$/.test(retoId) || !/^\d{6}$/.test(codigo)) {
@@ -352,7 +343,7 @@ router.post('/mfa/verificar', async (req, res) => {
   }
 });
 
-router.post('/mfa/reenviar', async (req, res) => {
+router.post('/mfa/reenviar', limitarReenvioMfa, async (req, res) => {
   const retoId = String(req.body?.challengeId || '');
   if (!/^[a-f0-9]{64}$/.test(retoId)) {
     return res.status(400).json({ error: 'La solicitud de reenvío no es válida.' });
@@ -398,14 +389,12 @@ router.post('/mfa/reenviar', async (req, res) => {
 
     try {
       await enviarCodigoMfa({
-        usuarioId: retos[0].usuario_id,
         correo: retos[0].correo,
-        retoId,
         codigo
       });
     } catch (err) {
       await pool.query("UPDATE retos_mfa SET estado = 'cancelado' WHERE reto_id = ? AND estado = 'pendiente'", [retoId]);
-      console.error('[auth] No se pudo reenviar el código MFA:', err.message);
+      console.error('[auth] No se pudo reenviar el código MFA:', err.code || 'EMAIL_DELIVERY_FAILED');
       return res.status(503).json({ error: 'No fue posible reenviar el código. Inicia sesión nuevamente más tarde.' });
     }
 

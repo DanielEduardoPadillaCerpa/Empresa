@@ -6,6 +6,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const { requiereAutenticacion, requiereAdmin } = require('./auth');
 const { registrarAuditoria } = require('../auditoria');
+const { invalidarIndiceCatalogo } = require('../assistant/indiceCatalogo');
 
 // Umbral por defecto para considerar "inventario bajo" (configurable por .env)
 const STOCK_MINIMO = Number(process.env.STOCK_MINIMO || 10);
@@ -14,6 +15,7 @@ const catalogoCache = new Map();
 
 function invalidarCacheCatalogo() {
   catalogoCache.clear();
+  invalidarIndiceCatalogo();
 }
 
 const IMAGENES_DIR = path.join(__dirname, '../../img/productos');

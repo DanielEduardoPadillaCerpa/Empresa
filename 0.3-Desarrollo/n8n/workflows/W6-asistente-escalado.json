@@ -1,0 +1,103 @@
+{
+  "name": "W6 - Asistente escalado",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "asistente-escalado",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "f02b4a70-116e-4ca5-90cc-f4c33cf95dd6",
+      "name": "Webhook firmado",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "asistente-escalado",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURE_N8N_CREDENTIAL_ID",
+          "name": "W6 assistant escalation token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst item = $input.first();\nconst headers = item.json.headers || {};\nconst rawBody = item.json.body;\nif (typeof rawBody !== 'string') throw new Error('Raw Body must be enabled on the Webhook node');\nconst payload = JSON.parse(rawBody);\nconst timestamp = String(headers['x-automation-timestamp'] || '');\nconst received = String(headers['x-automation-signature'] || '');\nconst secret = process.env.N8N_W6_ASSISTANT_ESCALATION_SECRET || '';\nif (secret.length < 32 || !/^\\d{10}$/.test(timestamp)) throw new Error('Invalid webhook configuration');\nif (Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp)) > 300) throw new Error('Expired webhook signature');\nconst expected = crypto.createHmac('sha256', secret).update(`${timestamp}.${JSON.stringify(payload)}`).digest('hex');\nconst a = Buffer.from(received, 'hex');\nconst b = Buffer.from(expected, 'hex');\nif (a.length !== b.length || !crypto.timingSafeEqual(a, b)) throw new Error('Invalid webhook signature');\nif (payload.evento !== 'asistente.escalado' || typeof payload.conversacion_id !== 'string') throw new Error('Invalid assistant escalation event');\nreturn [{ json: payload }];"
+      },
+      "id": "341e977f-e3f3-4ee0-9b7f-53b25055d942",
+      "name": "Validar firma y evento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.AUTOMATION_FROM_EMAIL }}",
+        "toEmail": "={{ $env.ADMIN_EMAIL }}",
+        "subject": "Solicitud de atención del asistente",
+        "emailFormat": "text",
+        "text": "=Evento: {{ $json.evento }}\nConversación: {{ $json.conversacion_id }}\nMotivo: {{ $json.motivo }}\nResumen: {{ $json.resumen }}\nFecha: {{ $json.fecha }}",
+        "options": {}
+      },
+      "id": "9f55e3ce-9f82-42e0-91d1-f9cf8b225d82",
+      "name": "Avisar al administrador",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        300
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "CONFIGURE_SMTP_CREDENTIAL_ID",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook firmado": {
+      "main": [
+        [
+          {
+            "node": "Validar firma y evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar firma y evento": {
+      "main": [
+        [
+          {
+            "node": "Avisar al administrador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "75f03b93-e11a-42da-996c-22ad9bbef4cb",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

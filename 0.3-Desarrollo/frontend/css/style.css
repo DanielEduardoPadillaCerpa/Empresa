@@ -707,12 +707,30 @@ footer.institucional a { color: var(--paper-100); }
 .cb-msg { max-width: 85%; padding: 0.5rem 0.7rem; border-radius: 8px; line-height: 1.35; }
 .cb-msg.bot { background: var(--paper-100); border: 1px solid rgba(11,35,64,0.1); align-self: flex-start; }
 .cb-msg.user { background: var(--navy-900); color: var(--paper-50); align-self: flex-end; }
+.cb-product-card {
+  display: grid; gap: 0.35rem; width: 100%; padding: 0.7rem;
+  border: 1px solid rgba(11,35,64,0.18); border-radius: 8px; background: #fff;
+}
+.cb-product-card img { width: 100%; max-height: 130px; object-fit: contain; }
+.cb-product-card p { margin: 0; }
+.cb-product-card a { color: var(--navy-700); font-weight: 600; }
+.cb-quick-start { max-height: 75px; overflow-y: auto; }
+.cb-quick button:focus-visible, #chatbot-panel button:focus-visible,
+#chatbot-panel a:focus-visible, #chatbot-panel input:focus-visible {
+  outline: 3px solid var(--brass-600); outline-offset: 2px;
+}
 .cb-quick { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0.85rem 0.6rem; }
 .cb-quick button {
   font-size: 0.74rem; border: 1px solid var(--navy-700); background: transparent;
   color: var(--navy-700); border-radius: 12px; padding: 3px 10px;
 }
 .cb-quick button:hover { background: var(--navy-900); color: #fff; }
+.cb-human-button {
+  align-self: flex-start; margin: 0 0.85rem 0.55rem; padding: 0.3rem 0.65rem;
+  border: 1px solid var(--navy-700); border-radius: 12px; background: transparent;
+  color: var(--navy-700); font-size: 0.74rem;
+}
+.cb-human-button:hover { background: var(--navy-900); color: #fff; }
 #chatbot-panel .cb-input {
   display: flex; border-top: 1px solid rgba(11,35,64,0.12);
 }

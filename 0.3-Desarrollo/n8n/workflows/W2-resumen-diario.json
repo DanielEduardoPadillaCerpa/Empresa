@@ -1,0 +1,91 @@
+{
+  "name": "W2 - Resumen diario de ventas",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "c86a8f46-19f4-44f1-92cf-5f30af756001",
+      "name": "Cada día a las 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.BACKEND_BASE_URL}}/api/automatizaciones/resumen-diario",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-automation-token",
+              "value": "={{$env.N8N_W2_DAILY_SUMMARY_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "c86a8f46-19f4-44f1-92cf-5f30af756002",
+      "name": "Consultar resumen agregado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const data = $input.first().json;\nif (Object.keys(data).sort().join('|') !== ['evento', 'fecha', 'moneda', 'total'].sort().join('|') || data.evento !== 'resumen_diario' || data.moneda !== 'COP' || !/^\\d+$/.test(String(data.total)) || !Number.isFinite(Date.parse(data.fecha))) throw new Error('Invalid daily summary response');\nconst centavos = BigInt(data.total);\nconst totalPesos = `${(centavos / 100n).toLocaleString('es-CO')},${String(centavos % 100n).padStart(2, '0')}`;\nreturn [{ json: { ...data, total_pesos: totalPesos } }];"
+      },
+      "id": "c86a8f46-19f4-44f1-92cf-5f30af756003",
+      "name": "Validar y formatear resumen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.ADMIN_ALERT_FROM}}",
+        "toEmail": "={{$env.ADMIN_ALERT_TO}}",
+        "subject": "=Resumen diario de ventas · {{$json.fecha}}",
+        "emailFormat": "text",
+        "text": "=Evento: {{$json.evento}}\nTotal aprobado últimas 24 horas: ${{$json.total_pesos}} {{$json.moneda}}\nFecha de generación: {{$json.fecha}}\n\nResumen agregado sin datos personales."
+      },
+      "id": "c86a8f46-19f4-44f1-92cf-5f30af756004",
+      "name": "Enviar resumen agregado",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Cada día a las 08:00": {
+      "main": [[{"node": "Consultar resumen agregado", "type": "main", "index": 0}]]
+    },
+    "Consultar resumen agregado": {
+      "main": [[{"node": "Validar y formatear resumen", "type": "main", "index": 0}]]
+    },
+    "Validar y formatear resumen": {
+      "main": [[{"node": "Enviar resumen agregado", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Bogota"
+  },
+  "versionId": "c86a8f46-19f4-44f1-92cf-5f30af756005",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

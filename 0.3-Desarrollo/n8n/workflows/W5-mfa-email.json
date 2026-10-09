@@ -1,0 +1,114 @@
+{
+  "name": "W5 - MFA - Enviar código de acceso",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mfa-login-code",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "aa34cb15-3a1f-433d-9890-afe139900001",
+      "name": "Webhook MFA",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "mfa-login-code",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "MFA Header Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const b = $input.first().json.body || {};\nconst escapeHtml = value => String(value).replace(/[&<>\"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[character]);\nif (b.event !== 'mfa.login.code') throw new Error('Evento no permitido');\nif (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(b.email || ''))) throw new Error('Correo inválido');\nif (!/^\\d{6}$/.test(String(b.token_mfa || ''))) throw new Error('Código inválido');\nif (!Number.isInteger(b.expires_in_seconds) || b.expires_in_seconds < 60 || b.expires_in_seconds > 300) throw new Error('Vigencia inválida');\nif (typeof b.timestamp !== 'string' || !Number.isFinite(Date.parse(b.timestamp))) throw new Error('Fecha inválida');\nconst minutes = Math.ceil(b.expires_in_seconds / 60);\nconst code = escapeHtml(b.token_mfa);\nconst html = `<div style=\"font-family:Arial,sans-serif;max-width:420px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px\"><h2 style=\"margin:0 0 8px;color:#0f172a\">Código de verificación</h2><p style=\"color:#475569\">Usa este código para completar tu inicio de sesión. Vence en ${minutes} minutos.</p><p style=\"font-size:34px;letter-spacing:8px;font-weight:700;text-align:center;margin:24px 0;color:#0d4f9c\">${code}</p><p style=\"color:#64748b;font-size:13px\">Si no fuiste tú, ignora este mensaje. Nunca compartas este código.</p></div>`;\nreturn [{ json: { to: b.email, subject: 'Tu código de verificación', html } }];"
+      },
+      "id": "aa34cb15-3a1f-433d-9890-afe139900002",
+      "name": "Validar y armar correo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.MFA_FROM_EMAIL}}",
+        "toEmail": "={{$json.to}}",
+        "subject": "={{$json.subject}}",
+        "emailFormat": "html",
+        "html": "={{$json.html}}",
+        "options": {}
+      },
+      "id": "aa34cb15-3a1f-433d-9890-afe139900003",
+      "name": "Enviar código por SMTP",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [480, 0],
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "SMTP para MFA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "aa34cb15-3a1f-433d-9890-afe139900004",
+      "name": "Responder envío aceptado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, -80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":false}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "aa34cb15-3a1f-433d-9890-afe139900005",
+      "name": "Responder fallo de correo",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 100]
+    }
+  ],
+  "connections": {
+    "Webhook MFA": {
+      "main": [[{"node": "Validar y armar correo", "type": "main", "index": 0}]]
+    },
+    "Validar y armar correo": {
+      "main": [[{"node": "Enviar código por SMTP", "type": "main", "index": 0}]]
+    },
+    "Enviar código por SMTP": {
+      "main": [
+        [{"node": "Responder envío aceptado", "type": "main", "index": 0}],
+        [{"node": "Responder fallo de correo", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false
+  },
+  "active": false,
+  "versionId": "aa34cb15-3a1f-433d-9890-afe139900006",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

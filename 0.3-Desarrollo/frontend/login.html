@@ -255,7 +255,11 @@ form.addEventListener('submit', async function (e) {
     });
     const datos = await resp.json().catch(() => ({}));
     if (resp.status !== 202 || datos.mfaRequired !== true || !datos.challengeId) {
-      throw new Error(datos.error || 'No fue posible iniciar la verificación de seguridad.');
+      const error = new Error(resp.status === 503
+        ? (datos.error || 'El servicio de envío del código de seguridad no está disponible. Intenta de nuevo más tarde.')
+        : (datos.error || 'No fue posible iniciar la verificación de seguridad.'));
+      error.status = resp.status;
+      throw error;
     }
     guardarRetoMfa({
       challengeId: datos.challengeId,
@@ -291,7 +295,7 @@ formMfa.addEventListener('submit', async event => {
     });
     const datos = await response.json().catch(() => ({}));
     if (!response.ok) {
-      if (response.status === 410 || response.status === 429) {
+      if (response.status === 410 || (response.status === 429 && datos.code !== 'RATE_LIMITED')) {
         mostrarEstadoMfa(datos.error || 'El código ya no es válido. Vuelve a iniciar sesión.');
         btnMfaSubmit.disabled = true;
         return;
@@ -323,17 +327,29 @@ btnMfaReenviar.addEventListener('click', async () => {
       body: JSON.stringify({ challengeId: retoMfa.challengeId })
     });
     const datos = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(datos.error || 'No se pudo reenviar el código.');
+    if (!response.ok) {
+      const error = new Error(response.status === 503
+        ? (datos.error || 'El servicio de envío del código no está disponible. Vuelve a iniciar sesión más tarde.')
+        : (datos.error || 'No se pudo reenviar el código.'));
+      error.status = response.status;
+      throw error;
+    }
     retoMfa.correoEnmascarado = datos.correoEnmascarado || retoMfa.correoEnmascarado;
     retoMfa.expiraEn = Date.now() + Number(datos.expiresIn || 300) * 1000;
     retoMfa.reenviarEn = Date.now() + 60000;
     guardarRetoMfa(retoMfa);
     mostrarEstadoMfa('Código enviado. Revisa tu correo y la carpeta de correo no deseado.', 'success');
   } catch (err) {
-    mostrarEstadoMfa(err.name === 'TypeError'
+    const mensajeError = err.name === 'TypeError'
       ? 'No fue posible conectar para reenviar el código.'
-      : err.message);
-    if (err.name === 'TypeError') btnMfaReenviar.disabled = false;
+      : err.message;
+    if (err.status === 503) {
+      limpiarRetoMfa();
+      mostrarMensaje(mensajeError, 'danger');
+    } else {
+      mostrarEstadoMfa(mensajeError);
+      btnMfaReenviar.disabled = false;
+    }
   }
 });
 

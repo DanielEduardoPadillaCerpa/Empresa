@@ -128,6 +128,11 @@
     background: var(--paper-50, #fafaf7); border: 1px solid rgba(11,35,64,.1);
     border-radius: 8px; padding: 1rem; margin-top: .75rem;
   }
+  .checkout-progreso { display:flex; justify-content:center; gap:.75rem; margin-bottom:1.5rem; }
+  .checkout-progreso span { padding:.45rem .8rem; border-radius:999px; background:#e5e7eb; color:#475569; font-size:.8rem; font-weight:700; }
+  .checkout-progreso span.activo { background:#0f172a; color:#fff; }
+  .checkout-mock-aviso { border:1px solid #fcd34d; background:#fffbeb; color:#92400e; border-radius:8px; padding:.75rem 1rem; font-size:.85rem; }
+  #resultado-pago .recibo-wrap { padding:1rem; }
     /* ===== Recibo de pago ===== */
   .recibo-wrap { background:#eaf0f8; border-radius:20px; padding:2rem 1rem; }
   .recibo { max-width:420px; margin:0 auto; font-family:var(--font-body); color:#0f172a; }
@@ -209,11 +214,41 @@
   <div id="checkout-vacio" class="text-center py-5" style="display:none;">
     <div style="font-size:3.5rem;">🛒</div>
     <h2 class="h5 mt-3">Tu carrito está vacío</h2>
-    <p class="text-muted">Agrega productos antes de pagar  <a href="index.html" class="btn btn-dark mt-2">Ir al catálogo</a>
+    <p class="text-muted">Agrega productos antes de pagar.</p>
+    <a href="index.html" class="btn btn-dark mt-2">Ir al catálogo</a>
   </div>
 
-  <!-- Resultado del pago -->
-  <div id="resultado-pago" style="display:none;" class="mb-4"></div>
+  <div class="checkout-progreso" aria-label="Progreso de compra">
+    <span id="checkout-paso-indicador-1" class="activo">1 · Carrito</span>
+    <span id="checkout-paso-indicador-2">2 · Datos y pago</span>
+    <span id="checkout-paso-indicador-3">3 · Comprobante</span>
+  </div>
+
+  <section id="checkout-paso-carrito" class="tarjeta-form" style="display:none;" aria-labelledby="checkout-carrito-titulo">
+    <h2 id="checkout-carrito-titulo" class="tarjeta-form-titulo">Revisa tu carrito</h2>
+    <div id="checkout-cart-items"></div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3">
+      <a href="index.html" class="btn btn-outline-secondary">← Seguir comprando</a>
+      <div class="d-flex align-items-center gap-3">
+        <strong id="checkout-cart-total">Total estimado: $0</strong>
+        <button id="checkout-continuar" type="button" class="btn btn-pagar-verde px-4 py-2">Continuar con mis datos</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="modal fade" id="modalResultadoPago" tabindex="-1" aria-labelledby="modalResultadoPagoTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="modalResultadoPagoTitulo">Comprobante de la compra</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div id="resultado-pago"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Formulario principal -->
   <div id="checkout-contenido" class="row g-4" style="display:none;">
@@ -223,6 +258,7 @@
 
       <!-- Tarjeta 1: Identificación (con tabs de tipo de comprador) -->
       <div class="tarjeta-form">
+        <button type="button" class="btn btn-link p-0 mb-3" id="checkout-volver-carrito">← Volver al carrito</button>
         <div class="switch-tipo-comprador">
           <button type="button" class="switch-tab activo" id="tab-natural" onclick="seleccionarTipoComprador('natural')">⚡ Persona Natural</button>
           <button type="button" class="switch-tab" id="tab-empresa" onclick="seleccionarTipoComprador('empresa')">🏢 Empresa</button>
@@ -233,8 +269,8 @@
         <!-- Campos Persona Natural -->
         <div id="campos-identificacion-natural">
           <div class="mb-2">
-            <label class="form-label small">RUT/NIT</label>
-            <input type="text" id="rutNitNat" class="form-control" placeholder="Cédula, RUT o NIT">
+            <label class="form-label small">Cédula de ciudadanía</label>
+            <input type="text" id="rutNitNat" class="form-control" placeholder="Número de identificación" autocomplete="off">
           </div>
           <div class="row g-2">
             <div class="col-md-6">
@@ -358,25 +394,6 @@
         </div>
       </div>
 
-      <!-- Tarjeta 3 (solo empresa): Orden de compra -->
-      <div class="tarjeta-form" id="tarjeta-po" style="display:none;">
-        <div class="tarjeta-form-titulo">Orden de Compra (PO)</div>
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="empresaVincularPO" onchange="togglePODetalle()">
-          <label class="form-check-label small" for="empresaVincularPO">Vincular orden de compra a este pedido</label>
-        </div>
-        <div id="empresaPoDetalle" class="row g-2" style="display:none;">
-          <div class="col-md-8">
-            <label class="form-label small">Número de PO</label>
-            <input type="text" id="empresaPoNumero" class="form-control" placeholder="PO-000000">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label small">Soporte de la PO</label>
-            <input type="file" id="empresaPoArchivo" class="form-control">
-          </div>
-        </div>
-      </div>
-
       <!-- Tarjeta: Tus artículos -->
       <div class="tarjeta-form mb-0">
         <div class="tarjeta-form-titulo">Tus artículos</div>
@@ -399,7 +416,7 @@
           <span class="fw-semibold">$0 (Gratis)</span>
         </div>
         <div id="rs-iva-row" class="d-flex justify-content-between small mb-2" style="display:none;">
-          <span class="text-muted">IVA e impuestos operativos (19%)</span>
+          <span class="text-muted">IVA discriminado (19%)</span>
           <span id="rs-iva">$0</span>
         </div>
 
@@ -411,13 +428,23 @@
         </div>
 
         <div class="d-flex gap-2 mb-2">
-          <span class="badge-trust">🔒 Pago seguro</span>
-          <span class="badge-trust azul">🛡️ Compra protegida</span>
+          <span class="badge-trust">🔒 Sin datos de tarjeta</span>
+          <span class="badge-trust azul">🛡️ Inventario validado en servidor</span>
+        </div>
+
+        <div class="form-check my-3">
+          <input class="form-check-input" type="checkbox" id="enviar-comprobante">
+          <label class="form-check-label small" for="enviar-comprobante">Enviarme el comprobante por correo</label>
+          <div class="form-text">Desmarcado por defecto. El comprobante estará disponible en pantalla.</div>
+        </div>
+
+        <div class="checkout-mock-aviso mb-3">
+          Modo de pruebas: el resultado es simulado por el servidor. No ingreses datos de tarjeta; la pasarela real se integrará en una fase posterior.
         </div>
 
         <!-- Formas de pago: Persona Natural -->
         <div id="pago-natural">
-          <div class="formas-pago-titulo">Formas de pago seguras</div>
+          <div class="formas-pago-titulo">Selecciona un método para la simulación</div>
           <div class="metodos-grid">
             <label class="metodo-fila" data-grupo="natural" data-metodo="NEQUI">
               <span class="radio-visual"></span><span class="logo-pago">NEQUI</span>
@@ -428,100 +455,23 @@
             <label class="metodo-fila full" data-grupo="natural" data-metodo="PSE">
               <span class="radio-visual"></span><span class="logo-pago">PSE</span>
             </label>
-            <label class="metodo-fila" data-grupo="natural" data-metodo="VISA">
-              <span class="radio-visual"></span><span class="logo-pago">VISA</span>
-            </label>
-            <label class="metodo-fila" data-grupo="natural" data-metodo="MASTERCARD">
-              <span class="radio-visual"></span><span class="logo-pago">MASTERCARD</span>
-            </label>
-            <label class="metodo-fila full" data-grupo="natural" data-metodo="AMEX">
-              <span class="radio-visual"></span><span class="logo-pago">AMEX</span>
-            </label>
           </div>
-
-          <div id="detalle-pse-nat" class="seccion-metodo-detalle" style="display:none;">
-            <label class="form-label small">Banco</label>
-            <select id="pseBancoNat" class="form-select">
-              <option value="">— Selecciona tu banco —</option>
-              <option value="bancolombia">Bancolombia</option>
-              <option value="davivienda">Davivienda</option>
-              <option value="bbva">BBVA</option>
-              <option value="bogota">Banco de Bogotá</option>
-            </select>
-          </div>
-
-          <div id="detalle-tarjeta-nat" class="seccion-metodo-detalle" style="display:none;">
-            <div class="row g-2">
-              <div class="col-12">
-                <input type="text" id="tarjetaNumeroNat" class="form-control form-control-sm" placeholder="Número de tarjeta" maxlength="19" inputmode="numeric">
-              </div>
-              <div class="col-6">
-                <input type="text" id="tarjetaVencimientoNat" class="form-control form-control-sm" placeholder="MM/AA" maxlength="5">
-              </div>
-              <div class="col-6">
-                <input type="text" id="tarjetaCvvNat" class="form-control form-control-sm" placeholder="CVV" maxlength="4" inputmode="numeric">
-              </div>
-              <div class="col-12">
-                <input type="text" id="tarjetaTitularNat" class="form-control form-control-sm" placeholder="Nombre del titular">
-              </div>
-            </div>
-          </div>
-
-          <button id="btn-pagar-natural" class="btn btn-pagar-verde w-100 py-3 mt-3">CONFIRMAR Y PAGAR AHORA</button>
+          <button id="btn-pagar-natural" type="button" class="btn btn-pagar-verde w-100 py-3 mt-3">CREAR PEDIDO Y SIMULAR PAGO</button>
         </div>
 
         <!-- Formas de pago: Empresa -->
         <div id="pago-empresa" style="display:none;">
-          <div class="formas-pago-titulo">Formas de pago corporativas</div>
+          <div class="formas-pago-titulo">Selecciona un método para la simulación</div>
           <div class="metodos-grid">
-            <label class="metodo-fila full" data-grupo="empresa" data-metodo="PSE">
-              <span class="radio-visual"></span><span class="logo-pago">PSE — Pagos seguros corporativos</span>
-            </label>
             <label class="metodo-fila full" data-grupo="empresa" data-metodo="ACH">
-              <span class="radio-visual"></span><span class="logo-pago">Transferencia bancaria ACH</span>
+              <span class="radio-visual"></span><span class="logo-pago">Transferencia bancaria</span>
             </label>
-            <label class="metodo-fila full" data-grupo="empresa" data-metodo="TARJETA">
-              <span class="radio-visual"></span><span class="logo-pago">Tarjeta de crédito corporativa</span>
+            <label class="metodo-fila full" data-grupo="empresa" data-metodo="PO">
+              <span class="radio-visual"></span><span class="logo-pago">Orden de compra autorizada</span>
             </label>
           </div>
 
-          <div id="detalle-pse-emp" class="seccion-metodo-detalle" style="display:none;">
-            <label class="form-label small">Banco</label>
-            <select id="pseBancoEmp" class="form-select">
-              <option value="">— Selecciona tu banco —</option>
-              <option value="bancolombia">Bancolombia</option>
-              <option value="davivienda">Davivienda</option>
-              <option value="bbva">BBVA</option>
-              <option value="bogota">Banco de Bogotá</option>
-            </select>
-          </div>
-
-          <div id="detalle-ach-emp" class="seccion-metodo-detalle" style="display:none;">
-            <p class="small text-muted mb-2">Realiza la transferencia ACH a la cuenta indicada y adjunta el comprobante.</p>
-            <label class="form-label small">Cuenta destino</label>
-            <input type="text" class="form-control mb-2" value="Bancolombia · Cuenta corriente 000-000000-00" disabled>
-            <label class="form-label small">Comprobante (opcional)</label>
-            <input type="file" id="achComprobante" class="form-control">
-          </div>
-
-          <div id="detalle-tarjeta-emp" class="seccion-metodo-detalle" style="display:none;">
-            <div class="row g-2">
-              <div class="col-12">
-                <input type="text" id="tarjetaNumeroEmp" class="form-control form-control-sm" placeholder="Número de tarjeta" maxlength="19" inputmode="numeric">
-              </div>
-              <div class="col-6">
-                <input type="text" id="tarjetaVencimientoEmp" class="form-control form-control-sm" placeholder="MM/AA" maxlength="5">
-              </div>
-              <div class="col-6">
-                <input type="text" id="tarjetaCvvEmp" class="form-control form-control-sm" placeholder="CVV" maxlength="4" inputmode="numeric">
-              </div>
-              <div class="col-12">
-                <input type="text" id="tarjetaTitularEmp" class="form-control form-control-sm" placeholder="Nombre del titular">
-              </div>
-            </div>
-          </div>
-
-          <button id="btn-pagar-empresa" class="btn btn-pagar-verde w-100 py-3 mt-3">CONFIRMAR Y AUTORIZAR PEDIDO</button>
+          <button id="btn-pagar-empresa" type="button" class="btn btn-pagar-verde w-100 py-3 mt-3">CREAR PEDIDO Y SIMULAR PAGO</button>
         </div>
 
         <p class="text-center text-muted small mt-3 mb-0">
@@ -561,6 +511,21 @@
 function fmt(valor) {
   return '$' + (Number(valor) || 0).toLocaleString('es-CO');
 }
+function precioPesosACentavos(valor) {
+  const coincidencia = /^(\d+)(?:\.(\d{1,2}))?$/.exec(String(valor));
+  if (!coincidencia) throw new Error('Uno de los precios del carrito no es válido.');
+  return BigInt(coincidencia[1]) * 100n + BigInt((coincidencia[2] || '').padEnd(2, '0') || '0');
+}
+function formatoCentavos(centavos) {
+  const valor = BigInt(centavos);
+  const pesos = valor / 100n;
+  const fraccion = String(valor % 100n).padStart(2, '0');
+  return '$' + Number(pesos).toLocaleString('es-CO') + (fraccion === '00' ? '' : ',' + fraccion);
+}
+function totalCarritoCentavos() {
+  return items.reduce((total, item) =>
+    total + precioPesosACentavos(item.precio) * BigInt(item.cantidad), 0n);
+}
 function mostrarError(msg) {
   const el = document.getElementById('checkout-error');
   el.textContent = msg;
@@ -578,6 +543,12 @@ function mostrarOverlay(titulo, sub) {
 function ocultarOverlay() {
   document.getElementById('overlay-procesando').style.display = 'none';
 }
+function actualizarPasoActivo(paso) {
+  [1, 2, 3].forEach(numero => {
+    document.getElementById(`checkout-paso-indicador-${numero}`)
+      .classList.toggle('activo', numero === paso);
+  });
+}
 
 if (!authEstaLogueado()) {
   window.location.href = 'login.html?redirect=checkout.html';
@@ -585,11 +556,13 @@ if (!authEstaLogueado()) {
 
 let items = carritoLeer();
 let tipoComprador = 'natural';
-let metodoNatural = null;   // NEQUI | DAVIPLATA | PSE | VISA | MASTERCARD | AMEX
-let metodoEmpresa = null;   // PSE | ACH | TARJETA
-
-// Métodos que usan el mismo panel de tarjeta
-const METODOS_TARJETA_NAT = ['VISA', 'MASTERCARD', 'AMEX'];
+let metodoNatural = null;
+let metodoEmpresa = null;
+let solicitudEnCurso = false;
+let pedidoPendienteActivo = false;
+let contextoPedidoActual = null;
+const CHECKOUT_KEY_STORAGE = 'si_checkout_idempotency_key';
+const CHECKOUT_PEDIDO_STORAGE = 'si_checkout_pedido_id';
 
 function seleccionarTipoComprador(tipo) {
   tipoComprador = tipo;
@@ -600,17 +573,11 @@ function seleccionarTipoComprador(tipo) {
   document.getElementById('campos-identificacion-empresa').style.display = tipo === 'empresa' ? 'block' : 'none';
   document.getElementById('direccion-natural').style.display = tipo === 'natural' ? 'block' : 'none';
   document.getElementById('direccion-empresa').style.display = tipo === 'empresa' ? 'block' : 'none';
-  document.getElementById('tarjeta-po').style.display = tipo === 'empresa' ? 'block' : 'none';
   document.getElementById('pago-natural').style.display = tipo === 'natural' ? 'block' : 'none';
   document.getElementById('pago-empresa').style.display = tipo === 'empresa' ? 'block' : 'none';
 
   ocultarError();
   actualizarResumen();
-}
-
-function togglePODetalle() {
-  const marcado = document.getElementById('empresaVincularPO').checked;
-  document.getElementById('empresaPoDetalle').style.display = marcado ? 'flex' : 'none';
 }
 
 // ── Inicializar página ────────────────────────────────
@@ -619,70 +586,111 @@ function togglePODetalle() {
     document.getElementById('checkout-vacio').style.display = 'block';
     return;
   }
-  document.getElementById('checkout-contenido').style.display = '';
+  document.getElementById('checkout-paso-carrito').style.display = 'block';
 
   if (items.some(i => i.restringido)) {
     document.getElementById('aviso-restringido').style.display = 'block';
   }
 
   actualizarResumen();
+  renderCarritoCheckout();
 
   const sesion = authLeer();
   if (sesion?.direccionEntrega) {
     document.getElementById('direccionExactaNat').value = sesion.direccionEntrega;
   }
+  if (sesion?.nombre) document.getElementById('nombreCompletoNat').value = sesion.nombre;
+  if (sesion?.nombre) document.getElementById('empresaComprador').value = sesion.nombre;
 })();
 
+function renderCarritoCheckout() {
+  const contenedor = document.getElementById('checkout-cart-items');
+  const total = document.getElementById('checkout-cart-total');
+  contenedor.replaceChildren();
+  if (total) total.textContent = `Total estimado: ${formatoCentavos(totalCarritoCentavos())} COP`;
+  items.forEach(item => {
+    const fila = document.createElement('div');
+    fila.className = 'articulo-fila';
+    const imagen = document.createElement('img');
+    imagen.className = 'articulo-thumb';
+    imagen.src = item.imagen || '';
+    imagen.alt = item.nombre || 'Producto';
+    imagen.onerror = () => { imagen.style.visibility = 'hidden'; };
+
+    const info = document.createElement('div');
+    info.className = 'flex-grow-1';
+    const nombre = document.createElement('div');
+    nombre.className = 'fw-semibold small';
+    nombre.textContent = item.nombre || 'Producto';
+    const detalle = document.createElement('div');
+    detalle.className = 'text-muted small';
+    detalle.textContent = `Cantidad: ${item.cantidad} · ${fmt(item.precio)}`;
+    info.append(nombre, detalle);
+
+    const importe = document.createElement('div');
+    importe.className = 'fw-semibold';
+    importe.textContent = fmt(item.precio * item.cantidad);
+    fila.append(imagen, info, importe);
+    contenedor.appendChild(fila);
+  });
+}
+
+document.getElementById('checkout-continuar').addEventListener('click', () => {
+  document.getElementById('checkout-paso-carrito').style.display = 'none';
+  document.getElementById('checkout-contenido').style.display = '';
+  actualizarPasoActivo(2);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+document.getElementById('checkout-volver-carrito').addEventListener('click', () => {
+  document.getElementById('checkout-contenido').style.display = 'none';
+  document.getElementById('checkout-paso-carrito').style.display = 'block';
+  actualizarPasoActivo(1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
 function renderArticulos() {
-  document.getElementById('articulos-lista').innerHTML = items.map(i => `
-    <div class="articulo-fila">
-      <img src="${i.imagen || ''}" alt="${i.nombre}" class="articulo-thumb" onerror="this.style.visibility='hidden'">
-      <div class="flex-grow-1">
-        <div class="fw-semibold small">${i.nombre}</div>
-        <div class="text-muted small">Cantidad: ${i.cantidad} - ${fmt(i.precio)}</div>
-      </div>
-      <div class="text-end">
-        <div class="text-muted small">Subtotal</div>
-        <div class="fw-semibold">${fmt(i.precio * i.cantidad)}</div>
-      </div>
-    </div>`).join('');
+  const contenedor = document.getElementById('articulos-lista');
+  contenedor.replaceChildren();
+  items.forEach(item => {
+    const fila = document.createElement('div');
+    fila.className = 'articulo-fila';
+    const info = document.createElement('div');
+    info.className = 'flex-grow-1';
+    const nombre = document.createElement('div');
+    nombre.className = 'fw-semibold small';
+    nombre.textContent = item.nombre || 'Producto';
+    const detalle = document.createElement('div');
+    detalle.className = 'text-muted small';
+    detalle.textContent = `Cantidad: ${item.cantidad} · ${fmt(item.precio)}`;
+    info.append(nombre, detalle);
+    const subtotal = document.createElement('div');
+    subtotal.className = 'fw-semibold';
+    subtotal.textContent = formatoCentavos(precioPesosACentavos(item.precio) * BigInt(item.cantidad));
+    fila.append(info, subtotal);
+    contenedor.appendChild(fila);
+  });
 }
 
 function actualizarResumen() {
-  const total = items.reduce((a, i) => a + i.precio * i.cantidad, 0);
+  const totalCentavos = totalCarritoCentavos();
   renderArticulos();
+  renderCarritoCheckout();
 
-  document.getElementById('rs-subtotal').textContent = fmt(total);
-
-  const ivaRow = document.getElementById('rs-iva-row');
-  const totalLabel = document.getElementById('rs-total-label');
-
-  if (tipoComprador === 'empresa') {
-    const subtotalNeto = total / 1.19;
-    const iva = total - subtotalNeto;
-    document.getElementById('rs-subtotal').textContent = fmt(subtotalNeto);
-    document.getElementById('rs-iva').textContent = fmt(iva);
-    ivaRow.style.display = 'flex';
-    totalLabel.innerHTML = 'Total Bruto a Pagar:';
-  } else {
-    document.getElementById('rs-subtotal').textContent = fmt(total);
-    ivaRow.style.display = 'none';
-    totalLabel.innerHTML = 'Total a Pagar:<br><small class="text-muted fw-normal">IVA incluido</small>';
-  }
-  document.getElementById('rs-total').textContent = fmt(total);
+  const subtotalNetoCentavos = (totalCentavos * 100n + 59n) / 119n;
+  const ivaCentavos = totalCentavos - subtotalNetoCentavos;
+  document.getElementById('rs-subtotal').textContent = formatoCentavos(subtotalNetoCentavos);
+  document.getElementById('rs-iva').textContent = formatoCentavos(ivaCentavos);
+  document.getElementById('rs-iva-row').style.display = 'flex';
+  document.getElementById('rs-total-label').textContent = 'Total a pagar:';
+  document.getElementById('rs-total').textContent = formatoCentavos(totalCentavos);
 }
 
 // ── Selección de método de pago (ambos grupos) ────────
-const PANELES_NAT = { PSE: 'detalle-pse-nat', VISA: 'detalle-tarjeta-nat', MASTERCARD: 'detalle-tarjeta-nat', AMEX: 'detalle-tarjeta-nat' };
-const PANELES_EMP = { PSE: 'detalle-pse-emp', ACH: 'detalle-ach-emp', TARJETA: 'detalle-tarjeta-emp' };
-
 document.querySelectorAll('.metodo-fila[data-grupo="natural"]').forEach(fila => {
   fila.addEventListener('click', () => {
     metodoNatural = fila.dataset.metodo;
     document.querySelectorAll('.metodo-fila[data-grupo="natural"]').forEach(f => f.classList.remove('seleccionada'));
     fila.classList.add('seleccionada');
-    Object.values(PANELES_NAT).forEach(id => document.getElementById(id).style.display = 'none');
-    if (PANELES_NAT[metodoNatural]) document.getElementById(PANELES_NAT[metodoNatural]).style.display = 'block';
   });
 });
 
@@ -691,25 +699,8 @@ document.querySelectorAll('.metodo-fila[data-grupo="empresa"]').forEach(fila => 
     metodoEmpresa = fila.dataset.metodo;
     document.querySelectorAll('.metodo-fila[data-grupo="empresa"]').forEach(f => f.classList.remove('seleccionada'));
     fila.classList.add('seleccionada');
-    Object.values(PANELES_EMP).forEach(id => document.getElementById(id).style.display = 'none');
-    if (PANELES_EMP[metodoEmpresa]) document.getElementById(PANELES_EMP[metodoEmpresa]).style.display = 'block';
   });
 });
-
-// ── Formato automático de tarjeta ──────────────────────
-function activarFormatoTarjeta(sufijo) {
-  document.getElementById('tarjetaNumero' + sufijo)?.addEventListener('input', function () {
-    this.value = this.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim().slice(0, 19);
-  });
-  document.getElementById('tarjetaVencimiento' + sufijo)?.addEventListener('input', function () {
-    this.value = this.value.replace(/\D/g, '').replace(/^(\d{2})(\d)/, '$1/$2').slice(0, 5);
-  });
-  document.getElementById('tarjetaCvv' + sufijo)?.addEventListener('input', function () {
-    this.value = this.value.replace(/\D/g, '');
-  });
-}
-activarFormatoTarjeta('Nat');
-activarFormatoTarjeta('Emp');
 
 // ── Dirección según tipo de comprador ─────────────────
 function obtenerDireccion() {
@@ -739,7 +730,7 @@ function validarDatosComprador() {
   if (tipoComprador === 'natural') {
     const rutNit = document.getElementById('rutNitNat').value.trim();
     const nombre = document.getElementById('nombreCompletoNat').value.trim();
-    if (!rutNit) { mostrarError('Ingresa tu RUT/NIT.'); return false; }
+    if (!rutNit) { mostrarError('Ingresa tu cédula de ciudadanía.'); return false; }
     if (!nombre) { mostrarError('Ingresa tu nombre completo.'); return false; }
   } else {
     const razonSocial = document.getElementById('empresaRazonSocial').value.trim();
@@ -752,51 +743,26 @@ function validarDatosComprador() {
 
 function validarMetodoNatural() {
   if (!metodoNatural) { mostrarError('Selecciona una forma de pago.'); return false; }
-  if (metodoNatural === 'PSE' && !document.getElementById('pseBancoNat').value) {
-    mostrarError('Selecciona tu banco para pagar con PSE.'); return false;
-  }
-  if (METODOS_TARJETA_NAT.includes(metodoNatural)) {
-    const num  = document.getElementById('tarjetaNumeroNat').value.replace(/\s/g, '');
-    const venc = document.getElementById('tarjetaVencimientoNat').value;
-    const cvv  = document.getElementById('tarjetaCvvNat').value;
-    if (num.length < 13)              { mostrarError('Ingresa un número de tarjeta válido.'); return false; }
-    if (!/^\d{2}\/\d{2}$/.test(venc)){ mostrarError('Ingresa la fecha en formato MM/AA.');   return false; }
-    if (cvv.length < 3)                { mostrarError('Ingresa el CVV de la tarjeta.');        return false; }
-  }
   return true;
 }
 
 function validarMetodoEmpresa() {
   if (!metodoEmpresa) { mostrarError('Selecciona una forma de pago.'); return false; }
-  if (metodoEmpresa === 'PSE' && !document.getElementById('pseBancoEmp').value) {
-    mostrarError('Selecciona tu banco para pagar con PSE.'); return false;
-  }
-  if (metodoEmpresa === 'TARJETA') {
-    const num  = document.getElementById('tarjetaNumeroEmp').value.replace(/\s/g, '');
-    const venc = document.getElementById('tarjetaVencimientoEmp').value;
-    const cvv  = document.getElementById('tarjetaCvvEmp').value;
-    const tit  = document.getElementById('tarjetaTitularEmp').value.trim();
-    if (num.length < 13)              { mostrarError('Ingresa un número de tarjeta válido.'); return false; }
-    if (!/^\d{2}\/\d{2}$/.test(venc)){ mostrarError('Ingresa la fecha en formato MM/AA.');   return false; }
-    if (cvv.length < 3)                { mostrarError('Ingresa el CVV de la tarjeta.');        return false; }
-    if (!tit)                          { mostrarError('Ingresa el nombre del titular.');        return false; }
-  }
   return true;
 }
 
 function obtenerDatosComprador() {
   return tipoComprador === 'natural' ? {
-    rutNit: document.getElementById('rutNitNat').value.trim(),
+    tipo: 'persona_natural',
+    identificacion: document.getElementById('rutNitNat').value.trim(),
     nombre: document.getElementById('nombreCompletoNat').value.trim(),
     telefono: document.getElementById('telefonoContactoNat').value.trim()
   } : {
+    tipo: 'empresa',
     razonSocial: document.getElementById('empresaRazonSocial').value.trim(),
     nit: document.getElementById('empresaNit').value.trim(),
     nombreComprador: document.getElementById('empresaComprador').value.trim(),
-    telefonoTrabajo: document.getElementById('empresaTelefono').value.trim(),
-    ordenCompra: document.getElementById('empresaVincularPO').checked
-      ? document.getElementById('empresaPoNumero').value.trim()
-      : null
+    telefono: document.getElementById('empresaTelefono').value.trim()
   };
 }
 
@@ -809,71 +775,70 @@ function prepararLineaPedido(item) {
   };
 }
 
-async function simularPasarela(metodo, direccion, sesion) {
-  const resp = await fetch(API_BASE + '/api/pagos/procesar', {
+async function crearIntentoCheckout(metodo, direccion, sesion, idempotencyKey) {
+  const resp = await fetch(API_BASE + '/api/checkout', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + sesion.token,
+      'Idempotency-Key': idempotencyKey
+    },
+    body: JSON.stringify({
+      items: items.map(prepararLineaPedido),
+      enviarComprobante: document.getElementById('enviar-comprobante').checked,
+      metodo,
+      datosComprador: obtenerDatosComprador(),
+      direccionEntrega: direccion
+    })
+  });
+  const resultado = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    sessionStorage.removeItem(CHECKOUT_KEY_STORAGE);
+    throw new Error(resultado.error || 'No fue posible iniciar el checkout.');
+  }
+  return resultado;
+}
+
+async function simularResultadoEnServidor(pedidoId, sesion) {
+  const resp = await fetch(API_BASE + '/api/pagos/dev/simular-webhook', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + sesion.token
     },
-    body: JSON.stringify({
-      metodo,
-      importe: items.reduce((s, i) => s + i.precio * i.cantidad, 0),
-      tipoComprador,
-      datosComprador: obtenerDatosComprador(),
-      direccionEntrega: direccion,
-      items: items.map(prepararLineaPedido)
-    })
+    body: JSON.stringify({ pedido_id: pedidoId })
   });
   const resultado = await resp.json().catch(() => ({}));
   if (!resp.ok) {
-    throw new Error(resultado.error || 'No fue posible verificar el pago.');
+    throw new Error(resultado.error || 'No fue posible procesar la simulación de pago.');
   }
-  return {
-    estado: resultado.estado,
-    ref: resultado.referencia,
-    mensaje: resultado.mensaje,
-    importe: resultado.importe,
-    fecha: resultado.fecha
-  };
+  return resultado;
 }
 
-async function registrarPedido(sesion, direccion, metodo, referencia) {
-  try {
-    const resp = await fetch(API_BASE + '/api/pedidos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + sesion.token
-      },
-      body: JSON.stringify({
-        items: items.map(i => ({
-          id: prepararLineaPedido(i).id,
-          nombre:     i.nombre,
-          cantidad:   i.cantidad,
-          precio:     i.precio,
-          variacion:  prepararLineaPedido(i).variacion
-        })),
-        direccionEntrega: direccion,
-        metodoPago:       metodo,
-        referenciaPago:   referencia,
-        tipoComprador:    tipoComprador,
-        datosComprador:   obtenerDatosComprador(),
-        total: items.reduce((s, i) => s + i.precio * i.cantidad, 0)
-      })
-    });
-    const data = await resp.json().catch(() => ({}));
-    return resp.ok ? { ok: true, id: data.id } : { ok: false, error: data.error || 'HTTP ' + resp.status };
-  } catch (err) {
-    console.error('[checkout] No se pudo registrar el pedido:', err);
-    return { ok: false, error: 'No fue posible conectar con el servidor para registrar el pedido.' };
+async function consultarEstadoPago(pedidoId, sesion) {
+  const resp = await fetch(`${API_BASE}/api/pagos/${encodeURIComponent(pedidoId)}/estado`, {
+    headers: { Authorization: 'Bearer ' + sesion.token }
+  });
+  const resultado = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(resultado.error || 'No fue posible consultar el estado del pago.');
+  return resultado;
+}
+
+async function esperarEstadoFinal(pedidoId, sesion, intentos = 5) {
+  let estado;
+  for (let intento = 0; intento < intentos; intento += 1) {
+    if (intento > 0) await new Promise(resolve => setTimeout(resolve, 2000));
+    estado = await consultarEstadoPago(pedidoId, sesion);
+    if (['aprobado', 'rechazado', 'expirado', 'reembolsado'].includes(estado.estado_pago)) break;
   }
+  return estado;
 }
 // ===== Recibo de pago =====
 const RECIBO_ESTADOS = {
   aprobado:  { clase: 'ok',   icono: '✓', titulo: 'Transacción Aprobada',  etiqueta: 'Aprobada' },
   pendiente: { clase: 'pend', icono: '…', titulo: 'Transacción Pendiente', etiqueta: 'Pendiente' },
-  rechazado: { clase: 'err',  icono: '✕', titulo: 'Transacción Rechazada', etiqueta: 'Rechazada' }
+  rechazado: { clase: 'err',  icono: '✕', titulo: 'Transacción Rechazada', etiqueta: 'Rechazada' },
+  expirado: { clase: 'err', icono: '✕', titulo: 'Intento expirado', etiqueta: 'Expirado' }
 };
 
 function reciboEsc(v) {
@@ -881,6 +846,9 @@ function reciboEsc(v) {
 }
 function reciboMoneda(v) {
   return '$' + Number(v || 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function reciboMonedaCentavos(v) {
+  return reciboMoneda(Number(BigInt(v || 0)) / 100);
 }
 function reciboFecha(iso) {
   let d = iso ? new Date(iso) : new Date();
@@ -910,26 +878,27 @@ function reciboTextoPlano(r, est) {
 function construirRecibo(r) {
   const est = RECIBO_ESTADOS[r.estado] || RECIBO_ESTADOS.pendiente;
   const colorValor = { ok: 'v-ok', pend: 'v-pend', err: 'v-err' }[est.clase];
-  const mailto = 'mailto:?subject=' + encodeURIComponent('Recibo de pago ' + (r.referencia || '')) +
-                 '&body=' + encodeURIComponent(reciboTextoPlano(r, est));
-
   const lineasHtml = r.items.map(i => `
         <div class="linea">
           <span>${reciboEsc(i.cantidad)} × ${reciboEsc(i.nombre)}${i.variacion ? ' (' + reciboEsc(i.variacion) + ')' : ''}</span>
-          <span>${reciboMoneda(i.precio * i.cantidad)}</span>
+          <span>${formatoCentavos(i.precio_centavos !== undefined
+            ? BigInt(i.precio_centavos) * BigInt(i.cantidad)
+            : precioPesosACentavos(i.precio) * BigInt(i.cantidad))}</span>
         </div>`).join('');
 
   const notas = {
     aprobado:  'Tu pedido fue registrado correctamente.',
-    pendiente: 'Tu banco aún debe confirmar el pago. Te notificaremos por correo cuando se apruebe.',
+    pendiente: 'El proveedor mock todavía no confirmó el resultado. Consulta nuevamente el estado del pedido.',
     rechazado: 'Verifica los datos o intenta con otro método de pago.'
-  }[r.estado] || '';
+  }[r.estado] || (r.estado === 'expirado' ? 'El intento venció. Puedes iniciar una nueva compra.' : '');
 
-  const botonPrincipal = r.estado === 'rechazado'
+  const botonPrincipal = ['rechazado', 'expirado'].includes(r.estado)
     ? '<button type="button" class="btn-recibo" onclick="cerrarRecibo()">Intentar de nuevo</button>'
-    : '<a class="btn-recibo" href="#" onclick="window.print(); return false;">Descargar / Imprimir</a>';
+    : (r.estado === 'pendiente'
+      ? '<button type="button" class="btn-recibo" onclick="consultarPedidoPendiente()">Consultar estado</button>'
+      : `<button type="button" class="btn-recibo" onclick="descargarComprobante(${Number(r.pedidoId)})">Descargar PDF</button>`);
   const botonSecundario = '<a class="btn-recibo sec" href="index.html">Regresar al comercio</a>';
-  const enlacePedidos = r.estado === 'rechazado' ? '' :
+  const enlacePedidos = ['rechazado', 'expirado'].includes(r.estado) ? '' :
     '<a class="btn-recibo sec" href="historial.html">Ver mis pedidos</a>';
 
   return `
@@ -940,7 +909,7 @@ function construirRecibo(r) {
             <div class="recibo-top">
               <div class="recibo-marca">
                 <b>Suministros</b><b class="azul">Institucionales</b>
-                <small>PROVEEDOR AUTORIZADO · REG-2026-0417</small>
+                <small>COMPROBANTE DE PRUEBA · NO ES FACTURA DIAN</small>
               </div>
               <div class="recibo-estado ${est.clase}">
                 <span class="recibo-icono">${est.icono}</span>
@@ -954,10 +923,10 @@ function construirRecibo(r) {
               <div class="recibo-fila"><span>Cliente / Entidad:</span><span>${reciboEsc(r.cliente)}</span></div>
               <div class="recibo-fila"><span>Entrega en:</span><span>${reciboEsc(r.direccion)}</span></div>
               <div class="recibo-items">${lineasHtml}</div>
-              <p class="recibo-nota">${notas}<br>Entorno de pruebas: no se realizó ningún cobro real.</p>
+              <p class="recibo-nota">${reciboEsc(notas)}<br>Comprobante informativo: no es factura electrónica DIAN.</p>
             </div>
             <div class="recibo-corte"><i></i><i></i></div>
-            <div class="recibo-total"><span>Total:</span><span>${reciboMoneda(r.total)}</span></div>
+            <div class="recibo-total"><span>Total:</span><span>${reciboMonedaCentavos(r.totalCentavos)}</span></div>
           </div>
         </div>
       </div>
@@ -966,11 +935,10 @@ function construirRecibo(r) {
         ${enlacePedidos}
         ${botonSecundario}
         <div class="recibo-compartir">
-          <span>Compartir por</span>
           <div>
             <button type="button" class="recibo-icono-btn" title="Imprimir" onclick="window.print()">🖨</button>
-            <a class="recibo-icono-btn" title="Correo" href="${mailto}">✉</a>
           </div>
+          ${r.enviarComprobante ? `<button type="button" class="btn btn-link btn-sm" onclick="reenviarComprobante(${Number(r.pedidoId)})">Reenviar comprobante por correo</button><small>El envío del comprobante se gestiona mediante el servicio de correo configurado.</small>` : ''}
         </div>
       </div>
     </div>`;
@@ -979,19 +947,171 @@ function construirRecibo(r) {
 function mostrarRecibo(r) {
   const el = document.getElementById('resultado-pago');
   el.innerHTML = construirRecibo(r);
-  el.style.display = 'block';
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  actualizarPasoActivo(3);
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalResultadoPago')).show();
 }
 
-function cerrarRecibo() {
-  const el = document.getElementById('resultado-pago');
-  el.style.display = 'none';
-  el.innerHTML = '';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+async function descargarComprobante(pedidoId) {
+  const sesion = authLeer();
+  if (!sesion?.token) return mostrarNotificacion('Inicia sesión para descargar el comprobante.', 'error');
+  try {
+    const response = await fetch(`${API_BASE}/api/comprobantes/${encodeURIComponent(pedidoId)}?format=pdf`, {
+      headers: { Authorization: 'Bearer ' + sesion.token }
+    });
+    if (!response.ok) {
+      const resultado = await response.json().catch(() => ({}));
+      throw new Error(resultado.error || 'No fue posible descargar el comprobante.');
+    }
+    const url = URL.createObjectURL(await response.blob());
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = `comprobante-${pedidoId}.pdf`;
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error) {
+    mostrarNotificacion(error.message || 'No fue posible descargar el comprobante.', 'error');
+  }
 }
+
+async function reenviarComprobante(pedidoId) {
+  const sesion = authLeer();
+  if (!sesion?.token) return mostrarNotificacion('Inicia sesión para reenviar el comprobante.', 'error');
+  try {
+    const response = await fetch(`${API_BASE}/api/comprobantes/${encodeURIComponent(pedidoId)}/reenviar`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + sesion.token }
+    });
+    const resultado = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(resultado.error || 'No fue posible solicitar el reenvío.');
+    mostrarNotificacion(resultado.mensaje || 'El comprobante quedó en cola para reenvío.', 'success');
+  } catch (error) {
+    mostrarNotificacion(error.message || 'No fue posible solicitar el reenvío.', 'error');
+  }
+}
+
+document.getElementById('modalResultadoPago').addEventListener('hide.bs.modal', event => {
+  if (pedidoPendienteActivo) event.preventDefault();
+});
+
+function cerrarRecibo() {
+  pedidoPendienteActivo = false;
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalResultadoPago')).hide();
+  sessionStorage.removeItem(CHECKOUT_KEY_STORAGE);
+  sessionStorage.removeItem(CHECKOUT_PEDIDO_STORAGE);
+  document.getElementById('checkout-paso-carrito').style.display = items.length ? 'block' : 'none';
+  document.getElementById('checkout-contenido').style.display = 'none';
+  document.getElementById('checkout-vacio').style.display = items.length ? 'none' : 'block';
+  actualizarPasoActivo(1);
+}
+
+function obtenerClaveIdempotencia() {
+  let clave = sessionStorage.getItem(CHECKOUT_KEY_STORAGE);
+  if (!clave) {
+    clave = crypto.randomUUID().replace(/-/g, '');
+    sessionStorage.setItem(CHECKOUT_KEY_STORAGE, clave);
+  }
+  return clave;
+}
+
+async function cargarComprobanteFrontend(pedidoId, sesion) {
+  const response = await fetch(`${API_BASE}/api/comprobantes/${encodeURIComponent(pedidoId)}`, {
+    headers: { Authorization: 'Bearer ' + sesion.token }
+  });
+  const resultado = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(resultado.error || 'No fue posible recuperar el comprobante.');
+  return resultado;
+}
+
+function construirDatosRecibo(estado, pedidoId, datosEstado, lineas, comprador, direccion, metodo, comprobante) {
+  const datosComprador = comprobante?.comprador || comprador;
+  return {
+    estado,
+    metodo: comprobante?.metodo || metodo,
+    referencia: comprobante?.numero || `MOCK-${pedidoId}`,
+    fecha: comprobante?.fecha || datosEstado.fecha || new Date().toISOString(),
+    cliente: datosComprador.razonSocial || datosComprador.nombre || datosComprador.nombreComprador || '—',
+    direccion: comprobante?.direccion_entrega || direccion,
+    pedidoId,
+    items: comprobante?.items || lineas,
+    totalCentavos: comprobante?.total_centavos || datosEstado.monto_centavos || String(totalCarritoCentavos()),
+    enviarComprobante: comprobante ? comprobante.enviar_correo : document.getElementById('enviar-comprobante').checked
+  };
+}
+
+async function mostrarEstadoPedido(pedidoId, sesion, contexto) {
+  const datosEstado = await esperarEstadoFinal(pedidoId, sesion);
+  const estadoPago = datosEstado.estado_pago;
+  const estado = estadoPago === 'aprobado' ? 'aprobado'
+    : estadoPago === 'rechazado' ? 'rechazado'
+      : estadoPago === 'expirado' ? 'expirado' : 'pendiente';
+  let comprobante = null;
+
+  if (estado === 'aprobado') {
+    try {
+    comprobante = await cargarComprobanteFrontend(pedidoId, sesion);
+    } catch (error) {
+    mostrarNotificacion(error.message || 'El pago fue aprobado, pero no se pudo cargar el comprobante.', 'error');
+    }
+  }
+
+  if (estado === 'aprobado') {
+    carritoVaciar();
+    items = [];
+    document.getElementById('checkout-contenido').style.display = 'none';
+    document.getElementById('checkout-paso-carrito').style.display = 'none';
+    document.getElementById('checkout-vacio').style.display = 'block';
+    sessionStorage.removeItem(CHECKOUT_KEY_STORAGE);
+    sessionStorage.removeItem(CHECKOUT_PEDIDO_STORAGE);
+  } else if (estado === 'rechazado' || estado === 'expirado') {
+    sessionStorage.removeItem(CHECKOUT_KEY_STORAGE);
+    sessionStorage.removeItem(CHECKOUT_PEDIDO_STORAGE);
+    document.getElementById('btn-pagar-natural').disabled = false;
+    document.getElementById('btn-pagar-empresa').disabled = false;
+  } else {
+    pedidoPendienteActivo = true;
+    document.getElementById('btn-pagar-natural').disabled = true;
+    document.getElementById('btn-pagar-empresa').disabled = true;
+  }
+
+  if (estado !== 'pendiente') pedidoPendienteActivo = false;
+  mostrarRecibo(construirDatosRecibo(
+    estado,
+    pedidoId,
+    datosEstado,
+    contexto.lineas,
+    contexto.comprador,
+    contexto.direccion,
+    contexto.metodo,
+    comprobante
+  ));
+  return estado;
+}
+
+async function consultarPedidoPendiente() {
+  const pedidoId = sessionStorage.getItem(CHECKOUT_PEDIDO_STORAGE);
+  const sesion = authLeer();
+  if (!pedidoId || !sesion?.token) return;
+  const contenido = document.getElementById('resultado-pago');
+  contenido.setAttribute('aria-busy', 'true');
+  try {
+    const estado = await consultarEstadoPago(pedidoId, sesion);
+    if (estado.estado_pago !== 'pendiente' && estado.estado_pago !== 'creado') {
+      await mostrarEstadoPedido(pedidoId, sesion, contextoPedidoActual);
+    } else {
+      mostrarNotificacion('El pago continúa pendiente de confirmación del proveedor.', 'info');
+    }
+  } catch (err) {
+    mostrarNotificacion(err.message || 'No fue posible consultar el estado del pedido.', 'error');
+  } finally {
+    contenido.removeAttribute('aria-busy');
+  }
+}
+
 async function procesarPago() {
   ocultarError();
-  if (!items.length) return;
+  if (solicitudEnCurso || !items.length) return;
 
   const direccion = obtenerDireccion();
   if (!direccion) return;
@@ -1010,62 +1130,61 @@ async function procesarPago() {
 
   const btnNat = document.getElementById('btn-pagar-natural');
   const btnEmp = document.getElementById('btn-pagar-empresa');
+  solicitudEnCurso = true;
   btnNat.disabled = true;
   btnEmp.disabled = true;
 
   try {
-    // Foto de la compra ANTES de vaciar el carrito: el recibo la necesita.
     const datosCompra = obtenerDatosComprador();
     const lineasRecibo = items.map(i => ({
       nombre: i.nombre, cantidad: i.cantidad, precio: i.precio, variacion: i.variacion || ''
     }));
-    const totalLocal = items.reduce((s, i) => s + i.precio * i.cantidad, 0);
-    const clienteRecibo = datosCompra.razonSocial || datosCompra.nombre || sesion.nombre || sesion.correo || '—';
+    const contextoRecibo = { lineas: lineasRecibo, comprador: datosCompra, direccion, metodo };
+    contextoPedidoActual = contextoRecibo;
+    const clave = obtenerClaveIdempotencia();
 
-    mostrarOverlay('Procesando pago con ' + metodo + '...', 'No cierres ni recargues esta ventana');
-    const resultado = await simularPasarela(metodo, direccion, sesion);
+    mostrarOverlay('Creando el pedido de prueba…', 'Los precios y el inventario se verifican en el servidor.');
+    const intento = await crearIntentoCheckout(metodo, direccion, sesion, clave);
+    sessionStorage.setItem(CHECKOUT_PEDIDO_STORAGE, String(intento.pedido_id));
     ocultarOverlay();
 
-    const armarRecibo = (pedidoId) => ({
-      estado: resultado.estado,
-      metodo,
-      referencia: resultado.ref,
-      fecha: resultado.fecha,
-      cliente: clienteRecibo,
-      direccion,
-      pedidoId,
-      items: lineasRecibo,
-      total: resultado.importe != null ? resultado.importe : totalLocal
-    });
-
-    if (resultado.estado === 'rechazado') {
-      mostrarRecibo(armarRecibo(null));
-      btnNat.disabled = false;
-      btnEmp.disabled = false;
-      return;
+    if (intento.estado === 'creado' || intento.estado === 'pendiente') {
+      mostrarOverlay('Simulando el resultado en el servidor…', 'El navegador no determina si el pago es aprobado.');
+      try {
+        await simularResultadoEnServidor(intento.pedido_id, sesion);
+      } finally {
+        ocultarOverlay();
+      }
     }
 
-    // aprobado o pendiente: se registra el pedido
-    mostrarOverlay('Registrando tu pedido...', 'Ya casi terminamos');
-    const pedido = await registrarPedido(sesion, direccion, metodo, resultado.ref);
-    ocultarOverlay();
-    if (!pedido.ok) {
-      mostrarNotificacion(pedido.error || 'No se pudo registrar el pedido. Conservamos tu carrito para reintentar.', 'error');
-      btnNat.disabled = false;
-      btnEmp.disabled = false;
-      return;
-    }
-
-    carritoVaciar();
-    items = [];
-    document.getElementById('checkout-contenido').style.display = 'none';
-    mostrarRecibo(armarRecibo(pedido.id));
+    mostrarOverlay('Verificando el estado del pago…', 'Consultando al servidor cada dos segundos.');
+    await mostrarEstadoPedido(intento.pedido_id, sesion, contextoRecibo);
 
   } catch (err) {
     ocultarOverlay();
-    mostrarError(err.message || 'No fue posible verificar el pago. No se ha confirmado la transacción.');
-    btnNat.disabled = false;
-    btnEmp.disabled = false;
+    const pedidoId = sessionStorage.getItem(CHECKOUT_PEDIDO_STORAGE);
+    if (pedidoId && contextoPedidoActual) {
+      try {
+        mostrarOverlay('Consultando el estado real del pedido…', 'El navegador no puede declarar el pago aprobado.');
+        await mostrarEstadoPedido(pedidoId, sesion, contextoPedidoActual);
+        return;
+      } catch (estadoError) {
+        err = estadoError;
+      } finally {
+        ocultarOverlay();
+      }
+    }
+    mostrarError(err.message || 'No se pudo confirmar el resultado. El servidor conserva el estado real del pedido.');
+    if (!pedidoId) {
+      btnNat.disabled = false;
+      btnEmp.disabled = false;
+    } else {
+      btnNat.disabled = false;
+      btnEmp.disabled = false;
+    }
+  } finally {
+    ocultarOverlay();
+    solicitudEnCurso = false;
   }
 }
 document.getElementById('btn-pagar-natural').addEventListener('click', procesarPago);

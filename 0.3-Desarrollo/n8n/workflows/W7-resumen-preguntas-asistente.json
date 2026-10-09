@@ -1,0 +1,116 @@
+{
+  "name": "W7 - Resumen semanal de preguntas del asistente",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "a4f148af-b2bc-490f-a568-e5af6e1e3878",
+      "name": "Cada semana",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.ASSISTANT_WEEKLY_SUMMARY_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.ASSISTANT_WEEKLY_SUMMARY_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": false
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "01c61763-fca0-4ebc-9798-99eb613cbf03",
+      "name": "Leer resumen agregado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.AUTOMATION_FROM_EMAIL }}",
+        "toEmail": "={{ $env.ADMIN_EMAIL }}",
+        "subject": "Resumen semanal de preguntas sin respuesta",
+        "emailFormat": "text",
+        "text": "=Preguntas sin respuesta en los últimos {{ $json.periodo_dias }} días: {{ $json.total }}\n\nDetalle agregado por día:\n{{ JSON.stringify($json.por_dia, null, 2) }}",
+        "options": {}
+      },
+      "id": "08283ddf-1b0c-4e0b-8099-ff6ff705cf6a",
+      "name": "Enviar resumen al administrador",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        300
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "CONFIGURE_SMTP_CREDENTIAL_ID",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cada semana": {
+      "main": [
+        [
+          {
+            "node": "Leer resumen agregado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer resumen agregado": {
+      "main": [
+        [
+          {
+            "node": "Enviar resumen al administrador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e9db8061-6dd3-4c75-9d15-7388f0ee8b9b",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

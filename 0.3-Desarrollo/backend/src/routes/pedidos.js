@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const { requiereAutenticacion, requiereAdmin } = require('./auth');
+const { liberarReserva } = require('../inventoryReservations');
 const { registrarAuditoria } = require('../auditoria');
+const { invalidarIndiceCatalogo } = require('../assistant/indiceCatalogo');
 
 // Convierte el campo items a array/objeto JS sin importar si mysql2
 // ya lo entregó parseado (columna JSON) o como texto.
@@ -10,119 +12,9 @@ function parsearItems(items) {
   return typeof items === 'string' ? JSON.parse(items) : items;
 }
 
-// POST /api/pedidos -> registrar un pedido (cliente)
+// Los pedidos solo se crean junto con un intento de pago en /api/checkout.
 router.post('/', requiereAutenticacion, async (req, res) => {
-  let connection;
-  try {
-    const clienteId = req.usuario.clienteId;
-    if (!clienteId) {
-      return res.status(400).json({ error: 'Tu cuenta todavía no está vinculada a un cliente registrado. Completa el registro antes de comprar.' });
-    }
-
-    const { items } = req.body; // items = [{ id, nombre, precio, cantidad }]
-    if (!items || !Array.isArray(items) || !items.length) {
-      return res.status(400).json({ error: 'Datos de pedido inválidos' });
-    }
-    const cantidadesPorProducto = new Map();
-    for (const item of items) {
-      const productId = Number(item.id);
-      const cantidad = Number(item.cantidad);
-      if (!Number.isSafeInteger(productId) || productId <= 0 || !Number.isSafeInteger(cantidad) || cantidad <= 0) {
-        return res.status(400).json({ error: `El producto "${item.nombre || '?'}" no tiene un ID válido` });
-      }
-      cantidadesPorProducto.set(productId, (cantidadesPorProducto.get(productId) || 0) + cantidad);
-    }
-
-    connection = await pool.getConnection();
-    await connection.beginTransaction();
-
-    // Trae el estado real de cada producto desde la base de datos — nunca
-    // se confía en lo que el navegador diga sobre precio, stock o si el
-    // producto es restringido, porque el carrito viaja en localStorage y
-    // se puede manipular.
-    const [clienteFilas] = await connection.query(
-      'SELECT autorizacion_general FROM clientes WHERE id = ?',
-      [clienteId]
-    );
-    if (!clienteFilas.length) {
-      await connection.rollback();
-      return res.status(400).json({ error: 'No se encontró el cliente asociado a tu cuenta.' });
-    }
-    const clienteAutorizado = !!clienteFilas[0].autorizacion_general;
-
-    let hayRestringido = false;
-    const itemsCanonicos = [];
-    const productosPorId = new Map();
-    const productosSolicitados = [...cantidadesPorProducto.entries()].sort(([idA], [idB]) => idA - idB);
-    for (const [productId, cantidad] of productosSolicitados) {
-      const [producto] = await connection.query(
-        'SELECT id, nombre, precio, cantidad_disponible, restringido, estado FROM productos WHERE id=? FOR UPDATE',
-        [productId]
-      );
-      if (!producto.length || producto[0].estado !== 'activo') {
-        await connection.rollback();
-        return res.status(404).json({ error: `Producto ${productId} no encontrado o no disponible` });
-      }
-      if (cantidad > Number(producto[0].cantidad_disponible)) {
-        await connection.rollback();
-        return res.status(400).json({ error: `No hay suficiente inventario para ${producto[0].nombre}` });
-      }
-      productosPorId.set(productId, producto[0]);
-      if (producto[0].restringido) hayRestringido = true;
-    }
-
-    for (const item of items) {
-      const producto = productosPorId.get(Number(item.id));
-      itemsCanonicos.push({
-        id: producto.id,
-        nombre: producto.nombre,
-        cantidad: Number(item.cantidad),
-        precio: Number(producto.precio),
-        ...(item.variacion ? { variacion: String(item.variacion) } : {})
-      });
-    }
-
-    // Equipo restringido: exige que el cliente tenga la autorización general
-    // registrada (verificación de antecedentes) antes de permitir la compra.
-    if (hayRestringido && !clienteAutorizado) {
-      await connection.rollback();
-      return res.status(403).json({
-        error: 'Tu pedido incluye equipo restringido. Para completarlo, tu cuenta debe tener registrada la autorización/verificación de antecedentes. Actualiza tu registro o contacta al administrador.'
-      });
-    }
-
-    // Calcular total
-    const total = itemsCanonicos.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
-
-    // Registrar pedido
-    const [resultado] = await connection.query(
-      'INSERT INTO pedidos (cliente_id, items, total, estado) VALUES (?, ?, ?, ?)',
-      [clienteId, JSON.stringify(itemsCanonicos), total, 'pendiente']
-    );
-
-    // Registrar el detalle (línea por producto) y descontar inventario
-    for (const item of itemsCanonicos) {
-      await connection.query(
-        'INSERT INTO detalle_pedido (pedido_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)',
-        [resultado.insertId, item.id, item.cantidad, item.precio]
-      );
-    }
-    for (const [productId, cantidad] of productosSolicitados) {
-      await connection.query(
-        'UPDATE productos SET cantidad_disponible = cantidad_disponible - ? WHERE id=?',
-        [cantidad, productId]
-      );
-    }
-
-    await connection.commit();
-    res.status(201).json({ id: resultado.insertId, total });
-  } catch (err) {
-    if (connection) await connection.rollback();
-    console.error(err);
-    res.status(500).json({ error: 'Error registrando pedido' });
-  } finally {
-    if (connection) connection.release();
-  }
+  res.status(410).json({ error: 'Este endpoint fue retirado. Los pedidos deben iniciar mediante POST /api/checkout.' });
 });
 
 // GET /api/pedidos/todos -> todos los pedidos (solo admin)
@@ -179,42 +71,68 @@ router.get('/', requiereAutenticacion, async (req, res) => {
 // solo si todavía está en estado "pendiente" (antes de ser enviado).
 // Declarada antes de '/:id' para no chocar con la ruta de admin.
 router.put('/:id/cancelar', requiereAutenticacion, async (req, res) => {
+  let connection;
   try {
     const clienteId = req.usuario.clienteId;
-    const [filas] = await pool.query(
-      'SELECT id, cliente_id, estado, items FROM pedidos WHERE id = ?',
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+    await connection.query(
+      "SELECT id FROM pagos WHERE pedido_id = ? AND estado IN ('creado','pendiente') FOR UPDATE",
       [req.params.id]
     );
-    if (!filas.length) return res.status(404).json({ error: 'Pedido no encontrado' });
+    const [filas] = await connection.query(
+      'SELECT id, cliente_id, estado, items FROM pedidos WHERE id = ? FOR UPDATE',
+      [req.params.id]
+    );
+    if (!filas.length) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
 
     const pedido = filas[0];
-    if (pedido.cliente_id !== clienteId) {
+    if (Number(pedido.cliente_id) !== Number(clienteId)) {
+      await connection.rollback();
       return res.status(403).json({ error: 'No puedes cancelar un pedido que no es tuyo' });
     }
-    if (pedido.estado !== 'pendiente') {
-      return res.status(400).json({ error: 'Solo se pueden cancelar pedidos en estado "pendiente" (antes de ser enviados)' });
+    if (!['pendiente', 'pendiente_pago'].includes(pedido.estado)) {
+      await connection.rollback();
+      return res.status(400).json({ error: 'Este pedido ya no puede cancelarse.' });
     }
 
-    await pool.query("UPDATE pedidos SET estado = 'cancelado' WHERE id = ?", [req.params.id]);
-
-    // Repone el inventario descontado al crear el pedido
-    const items = parsearItems(pedido.items);
-    for (const item of items) {
-      await pool.query(
-        'UPDATE productos SET cantidad_disponible = cantidad_disponible + ? WHERE id = ?',
-        [item.cantidad, item.id]
-      );
+    const [actualizacion] = await connection.query(
+      "UPDATE pedidos SET estado = 'cancelado' WHERE id = ? AND estado = ?",
+      [req.params.id, pedido.estado]
+    );
+    if (actualizacion.affectedRows !== 1) {
+      await connection.rollback();
+      return res.status(409).json({ error: 'El pedido cambió de estado y no pudo cancelarse.' });
     }
 
+    const [pagosActualizados] = await connection.query(
+      "UPDATE pagos SET estado = 'expirado' WHERE pedido_id = ? AND estado IN ('creado','pendiente')",
+      [req.params.id]
+    );
+    if (pedido.estado === 'pendiente_pago' && pagosActualizados.affectedRows < 1) {
+      throw new Error('PAYMENT_CANCELLATION_TRANSITION_FAILED');
+    }
+
+    await liberarReserva(connection, pedido);
+
+    await connection.commit();
+    invalidarIndiceCatalogo();
     res.json({ ok: true });
   } catch (err) {
-    console.error(err);
+    if (connection) await connection.rollback();
+    console.error('[pedidos] No se pudo cancelar el pedido:', err.code || 'INTERNAL_ERROR');
     res.status(500).json({ error: 'Error cancelando el pedido' });
+  } finally {
+    if (connection) connection.release();
   }
 });
 
 // PUT /api/pedidos/:id -> actualizar estado de un pedido (solo admin)
 router.put('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
+  let connection;
   try {
     const { estado } = req.body;
     // Se conservan los estados históricos y se añaden las etapas del timeline.
@@ -222,23 +140,45 @@ router.put('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Estado inválido' });
     }
 
-    const [filas] = await pool.query('SELECT id, estado, items FROM pedidos WHERE id = ?', [req.params.id]);
-    if (!filas.length) return res.status(404).json({ error: 'Pedido no encontrado' });
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+    const [filas] = await connection.query(
+      'SELECT id, estado, items FROM pedidos WHERE id = ? FOR UPDATE',
+      [req.params.id]
+    );
+    if (!filas.length) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
     const anterior = filas[0];
+    if (['pendiente_pago', 'rechazado', 'expirado'].includes(anterior.estado) ||
+        (anterior.estado === 'pagado' && ['pendiente', 'cancelado'].includes(estado))) {
+      await connection.rollback();
+      return res.status(409).json({ error: 'El estado del pago solo puede cambiar mediante un evento verificado.' });
+    }
 
-    await pool.query('UPDATE pedidos SET estado = ? WHERE id = ?', [estado, req.params.id]);
+    const [actualizacion] = await connection.query(
+      'UPDATE pedidos SET estado = ? WHERE id = ? AND estado = ?',
+      [estado, req.params.id, anterior.estado]
+    );
+    if (actualizacion.affectedRows !== 1) {
+      await connection.rollback();
+      return res.status(409).json({ error: 'El pedido cambió de estado y no pudo actualizarse.' });
+    }
 
     // Si el admin cancela un pedido que no estaba cancelado, repone inventario
     if (estado === 'cancelado' && anterior.estado !== 'cancelado') {
       const items = parsearItems(anterior.items);
       for (const item of items) {
-        await pool.query(
+        await connection.query(
           'UPDATE productos SET cantidad_disponible = cantidad_disponible + ? WHERE id = ?',
           [item.cantidad, item.id]
         );
       }
     }
 
+    await connection.commit();
+    if (estado === 'cancelado' && anterior.estado !== 'cancelado') invalidarIndiceCatalogo();
     await registrarAuditoria({
       usuario: req.usuario,
       accion: 'editar',
@@ -249,8 +189,11 @@ router.put('/:id', requiereAutenticacion, requiereAdmin, async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
-    console.error(err);
+    if (connection) await connection.rollback();
+    console.error('[pedidos] No se pudo actualizar el estado:', err.code || 'INTERNAL_ERROR');
     res.status(500).json({ error: 'Error actualizando estado del pedido' });
+  } finally {
+    if (connection) connection.release();
   }
 });
 

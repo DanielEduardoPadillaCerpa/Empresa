@@ -346,15 +346,16 @@ function authEnsureChatbot() {
   if (document.getElementById('chatbot-toggle') || document.getElementById('chatbot-panel')) return;
   const wrapper = document.createElement('div');
   wrapper.innerHTML = `
-    <button id="chatbot-toggle" type="button" onclick="cbToggle()" title="Atención al cliente" aria-label="Abrir atención al cliente">💬</button>
-    <section id="chatbot-panel" aria-label="Atención al cliente">
-      <div class="cb-header"><span>Atención al cliente</span><button type="button" onclick="cbToggle()" aria-label="Cerrar">×</button></div>
-      <div class="cb-body" id="cb-body"><div class="cb-msg bot">Hola. ¿En qué podemos ayudarte?</div></div>
+    <button id="chatbot-toggle" type="button" onclick="cbToggle()" title="Asistente del catálogo" aria-label="Abrir asistente del catálogo" aria-expanded="false">💬</button>
+    <section id="chatbot-panel" aria-label="Asistente del catálogo">
+      <div class="cb-header"><span>Asistente del catálogo</span><button type="button" onclick="cbToggle()" aria-label="Cerrar">×</button></div>
+      <div class="cb-body" id="cb-body" aria-live="polite" aria-relevant="additions text"><div class="cb-msg bot">Hola. Puedo ayudarte con el catálogo, precios y disponibilidad.</div></div>
       <div class="cb-quick cb-quick-start">
-        <button type="button" data-q="¿Cuáles son los tiempos de entrega?">Tiempos de entrega</button>
-        <button type="button" data-q="¿Qué métodos de pago aceptan?">Métodos de pago</button>
+        <button type="button" data-q="¿Qué productos tienen disponibles?">Productos disponibles</button>
+        <button type="button" data-q="¿Qué productos están restringidos?">Productos restringidos</button>
       </div>
-      <div class="cb-input"><input type="text" id="cb-input-text" placeholder="Escribe tu mensaje..." aria-label="Mensaje"><button type="button" onclick="cbEnviar()">Enviar</button></div>
+      <button class="cb-human-button" type="button">Hablar con una persona</button>
+      <div class="cb-input"><input type="text" id="cb-input-text" maxlength="500" placeholder="Pregunta sobre productos..." aria-label="Pregunta sobre el catálogo"><button id="cb-send-button" type="button" onclick="cbEnviar()">Enviar</button></div>
     </section>`;
   document.body.appendChild(wrapper);
   if (!document.querySelector('script[src$="js/chatbot.js"]')) {

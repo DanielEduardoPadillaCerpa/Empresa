@@ -1,0 +1,60 @@
+{
+  "name": "W4 - Expirar pedidos pendientes",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "ef478f1e-3771-477f-8d28-003892b26001",
+      "name": "Cada minuto",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BACKEND_BASE_URL}}/api/automatizaciones/pedidos/expirar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-automation-token",
+              "value": "={{$env.N8N_W4_EXPIRY_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "ef478f1e-3771-477f-8d28-003892b26002",
+      "name": "Solicitar expiración segura",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    }
+  ],
+  "connections": {
+    "Cada minuto": {
+      "main": [[{"node": "Solicitar expiración segura", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Bogota"
+  },
+  "versionId": "ef478f1e-3771-477f-8d28-003892b26003",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

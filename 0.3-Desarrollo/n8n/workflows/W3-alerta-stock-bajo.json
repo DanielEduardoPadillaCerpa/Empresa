@@ -1,0 +1,77 @@
+{
+  "name": "W3 - Alerta de stock bajo",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "empresa-stock-bajo",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d74a3ef1-6b48-43ba-abae-4f01e2a76001",
+      "name": "Webhook stock bajo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "empresa-stock-bajo"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true}",
+        "options": {}
+      },
+      "id": "d74a3ef1-6b48-43ba-abae-4f01e2a76005",
+      "name": "Confirmar recepción firmada",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [700, 160]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst input = $input.first().json;\nconst payload = input.body;\nconst headers = input.headers || {};\nconst timestamp = String(headers['x-automation-timestamp'] || '');\nconst signature = String(headers['x-automation-signature'] || '');\nif (!payload || typeof payload !== 'object' || Object.keys(payload).sort().join('|') !== 'evento|fecha' || payload.evento !== 'stock_bajo' || !Number.isFinite(Date.parse(payload.fecha)) || !/^\\d{10}$/.test(timestamp)) throw new Error('Invalid stock notification');\nif (Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp)) > 300) throw new Error('Expired notification');\nconst expected = crypto.createHmac('sha256', $env.N8N_W3_SECRET).update(`${timestamp}.${JSON.stringify(payload)}`).digest('hex');\nconst receivedBuffer = Buffer.from(signature, 'hex');\nconst expectedBuffer = Buffer.from(expected, 'hex');\nif (receivedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(receivedBuffer, expectedBuffer)) throw new Error('Invalid notification signature');\nreturn [{ json: payload }];"
+      },
+      "id": "d74a3ef1-6b48-43ba-abae-4f01e2a76002",
+      "name": "Verificar firma y datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.ADMIN_ALERT_FROM}}",
+        "toEmail": "={{$env.ADMIN_ALERT_TO}}",
+        "subject": "Alerta de inventario: stock bajo",
+        "emailFormat": "text",
+        "text": "=El sistema detectó inventario activo bajo el umbral configurado.\nFecha: {{$json.fecha}}\n\nConsulta el panel administrativo de inventario para identificar los productos. No se incluyen datos de productos en esta automatización."
+      },
+      "id": "d74a3ef1-6b48-43ba-abae-4f01e2a76003",
+      "name": "Avisar inventario bajo",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [920, 300]
+    }
+  ],
+  "connections": {
+    "Webhook stock bajo": {
+      "main": [[{"node": "Verificar firma y datos", "type": "main", "index": 0}]]
+    },
+    "Verificar firma y datos": {
+      "main": [[
+        {"node": "Confirmar recepción firmada", "type": "main", "index": 0},
+        {"node": "Avisar inventario bajo", "type": "main", "index": 0}
+      ]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Bogota"
+  },
+  "versionId": "d74a3ef1-6b48-43ba-abae-4f01e2a76004",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

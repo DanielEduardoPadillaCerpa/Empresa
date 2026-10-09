@@ -168,13 +168,6 @@ async function migrar() {
       FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
-  // Amplía el catálogo sin borrar pedidos ni estados legacy existentes.
-  await pool.query(`
-    ALTER TABLE pedidos MODIFY estado
-      ENUM('pendiente','confirmado','preparado','enviado','entregado','cancelado')
-      DEFAULT 'pendiente'
-  `);
-
   // Categorías
   await pool.query(`
     CREATE TABLE IF NOT EXISTS categorias (
@@ -266,9 +259,146 @@ async function migrar() {
       fecha_pedido DATETIME DEFAULT CURRENT_TIMESTAMP,
       items JSON NOT NULL,
       total DECIMAL(10,2) NOT NULL,
-      estado ENUM('pendiente','enviado','entregado') DEFAULT 'pendiente',
+      estado ENUM('pendiente','pendiente_pago','pagado','expirado','rechazado','confirmado','preparado','enviado','entregado','cancelado') DEFAULT 'pendiente',
+      datos_comprador_cifrados TEXT NULL,
+      direccion_entrega_cifrada TEXT NULL,
+      enviar_comprobante BOOLEAN NOT NULL DEFAULT FALSE,
       FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS pagos (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      pedido_id INT NOT NULL,
+      proveedor VARCHAR(32) NOT NULL,
+      referencia_externa VARCHAR(191) NULL UNIQUE,
+      idempotency_key VARCHAR(128) NOT NULL UNIQUE,
+      request_hash CHAR(64) NOT NULL,
+      widget_token VARCHAR(191) NULL,
+      widget_url TEXT NULL,
+      estado ENUM('creado','pendiente','aprobado','rechazado','expirado','reembolsado') NOT NULL DEFAULT 'creado',
+      monto_centavos BIGINT UNSIGNED NOT NULL,
+      moneda CHAR(3) NOT NULL DEFAULT 'COP',
+      metodo VARCHAR(32) NULL,
+      expira_en DATETIME NOT NULL,
+      creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_pagos_pedido_estado (pedido_id, estado),
+      FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS eventos_pago (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      evento_id VARCHAR(191) NOT NULL UNIQUE,
+      proveedor VARCHAR(32) NOT NULL,
+      pago_id BIGINT UNSIGNED NOT NULL,
+      payload_hash CHAR(64) NOT NULL,
+      recibido_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (pago_id) REFERENCES pagos(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS comprobantes (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      pedido_id INT NOT NULL UNIQUE,
+      numero VARCHAR(40) NOT NULL UNIQUE,
+      enviar_correo BOOLEAN NOT NULL DEFAULT FALSE,
+      enviado_cliente_en DATETIME NULL,
+      enviado_admin_en DATETIME NULL,
+      token_hash CHAR(64) NULL,
+      expira_en DATETIME NULL,
+      creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS correo_outbox (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      comprobante_id BIGINT UNSIGNED NOT NULL,
+      tipo ENUM('cliente','admin') NOT NULL,
+      estado ENUM('pendiente','procesando','enviado','fallido') NOT NULL DEFAULT 'pendiente',
+      intentos TINYINT UNSIGNED NOT NULL DEFAULT 0,
+      disponible_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      ultimo_error_code VARCHAR(64) NULL,
+      creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      enviado_en DATETIME NULL,
+      INDEX idx_correo_outbox_pendiente (estado, disponible_en, id),
+      INDEX idx_correo_outbox_comprobante (comprobante_id, tipo, estado),
+      FOREIGN KEY (comprobante_id) REFERENCES comprobantes(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS solicitudes_reenvio_comprobante (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      comprobante_id BIGINT UNSIGNED NOT NULL,
+      usuario_id INT NOT NULL,
+      creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_reenvio_comprobante_usuario_fecha (comprobante_id, usuario_id, creado_en),
+      FOREIGN KEY (comprobante_id) REFERENCES comprobantes(id) ON DELETE CASCADE,
+      FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS automation_outbox (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      workflow ENUM('W1','W3','W6') NOT NULL,
+      dedupe_key VARCHAR(191) NOT NULL UNIQUE,
+      payload JSON NOT NULL,
+      estado ENUM('pendiente','procesando','enviado','fallido') NOT NULL DEFAULT 'pendiente',
+      intentos TINYINT UNSIGNED NOT NULL DEFAULT 0,
+      disponible_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      ultimo_error_code VARCHAR(64) NULL,
+      creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_automation_outbox_pendiente (estado, disponible_en, id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(
+    "ALTER TABLE automation_outbox MODIFY workflow ENUM('W1','W3','W6') NOT NULL"
+  );
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS faq_asistente (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      palabras_clave VARCHAR(500) NOT NULL,
+      pregunta VARCHAR(255) NOT NULL UNIQUE,
+      respuesta TEXT NOT NULL,
+      activo BOOLEAN NOT NULL DEFAULT TRUE,
+      creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_faq_asistente_activo (activo)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS asistente_pendientes (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      conversacion_id VARCHAR(100) NOT NULL,
+      texto_normalizado VARCHAR(500) NOT NULL,
+      creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      atendido BOOLEAN NOT NULL DEFAULT FALSE,
+      INDEX idx_asistente_pendientes_fecha (atendido, creado_en)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    INSERT IGNORE INTO faq_asistente (palabras_clave, pregunta, respuesta, activo)
+    VALUES
+      ('envio entrega domicilio', '¿Cuáles son los tiempos y zonas de envío?', '[COMPLETAR: política de envíos aprobada]', TRUE),
+      ('garantia producto', '¿Qué garantía tienen los productos?', '[COMPLETAR: política de garantías aprobada]', TRUE),
+      ('devolucion cambio', '¿Cómo puedo solicitar una devolución o cambio?', '[COMPLETAR: política de devoluciones aprobada]', TRUE),
+      ('horario atencion', '¿Cuál es el horario de atención?', '[COMPLETAR: horario oficial de atención]', TRUE),
+      ('pago metodos medios', '¿Qué métodos de pago están habilitados?', '[COMPLETAR: medios de pago habilitados]', TRUE),
+      ('datos privacidad habeas', '¿Cómo se tratan mis datos personales?', '[COMPLETAR: aviso de privacidad y canal de Habeas Data aprobados]', TRUE)
   `);
 
   // Detalle de pedidos
@@ -343,12 +473,22 @@ async function migrarAutenticacionMfa() {
 // tiene el cambio aplicado, MySQL lanza error y simplemente se ignora.
 async function migrarColumnasFaltantes() {
   // Mantiene compatibles las instalaciones antiguas con el timeline operativo.
-  try {
-    await pool.query(
-      "ALTER TABLE pedidos MODIFY estado ENUM('pendiente','confirmado','preparado','enviado','entregado','cancelado') DEFAULT 'pendiente'"
-    );
-  } catch (err) {
-    console.warn('[db] No se pudo ajustar el estado de pedidos:', err.message);
+  await pool.query(
+    "ALTER TABLE pedidos MODIFY estado ENUM('pendiente','pendiente_pago','pagado','expirado','rechazado','confirmado','preparado','enviado','entregado','cancelado') DEFAULT 'pendiente'"
+  );
+
+  for (const [columna, definicion] of [
+    ['datos_comprador_cifrados', 'TEXT NULL'],
+    ['direccion_entrega_cifrada', 'TEXT NULL'],
+    ['enviar_comprobante', 'BOOLEAN NOT NULL DEFAULT FALSE']
+  ]) {
+    try {
+      await pool.query(`ALTER TABLE pedidos ADD COLUMN ${columna} ${definicion}`);
+    } catch (err) {
+      if (!/duplicate column/i.test(err.message)) {
+        throw err;
+      }
+    }
   }
 
   try {

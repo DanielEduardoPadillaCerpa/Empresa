@@ -1,0 +1,77 @@
+{
+  "name": "W1 - Alertas de pago",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "empresa-alerta-pago",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7a483de1-bba8-4b86-a82d-5bc94d756001",
+      "name": "Webhook pago",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "empresa-alerta-pago"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true}",
+        "options": {}
+      },
+      "id": "7a483de1-bba8-4b86-a82d-5bc94d756005",
+      "name": "Confirmar recepción firmada",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [700, 160]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst input = $input.first().json;\nconst payload = input.body;\nconst headers = input.headers || {};\nconst timestamp = String(headers['x-automation-timestamp'] || '');\nconst signature = String(headers['x-automation-signature'] || '');\nif (!payload || typeof payload !== 'object' || !/^\\d{10}$/.test(timestamp)) throw new Error('Invalid signed notification');\nif (Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp)) > 300) throw new Error('Expired notification');\nconst expectedKeys = ['estado', 'evento', 'fecha', 'moneda', 'pedido_id', 'total'];\nif (Object.keys(payload).sort().join('|') !== expectedKeys.sort().join('|')) throw new Error('Unexpected notification fields');\nif (payload.evento !== 'pago' || !['aprobado', 'rechazado'].includes(payload.estado) || payload.moneda !== 'COP' || !/^\\d+$/.test(String(payload.total)) || !/^\\d+$/.test(String(payload.pedido_id)) || !Number.isFinite(Date.parse(payload.fecha))) throw new Error('Invalid payment event');\n        const expected = crypto.createHmac('sha256', $env.N8N_W1_SECRET).update(`${timestamp}.${JSON.stringify(payload)}`).digest('hex');\nconst receivedBuffer = Buffer.from(signature, 'hex');\nconst expectedBuffer = Buffer.from(expected, 'hex');\nif (receivedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(receivedBuffer, expectedBuffer)) throw new Error('Invalid notification signature');\nconst centavos = BigInt(payload.total);\nconst totalPesos = `${(centavos / 100n).toLocaleString('es-CO')},${String(centavos % 100n).padStart(2, '0')}`;\nreturn [{ json: { ...payload, total_pesos: totalPesos } }];"
+      },
+      "id": "7a483de1-bba8-4b86-a82d-5bc94d756002",
+      "name": "Verificar firma y datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.ADMIN_ALERT_FROM}}",
+        "toEmail": "={{$env.ADMIN_ALERT_TO}}",
+        "subject": "=Pago {{$json.estado}} · pedido #{{$json.pedido_id}}",
+        "emailFormat": "text",
+        "text": "=Evento: {{$json.evento}}\nEstado: {{$json.estado}}\nPedido: #{{$json.pedido_id}}\nTotal: ${{$json.total_pesos}} {{$json.moneda}}\nFecha: {{$json.fecha}}\n\nAlerta automática sin datos personales."
+      },
+      "id": "7a483de1-bba8-4b86-a82d-5bc94d756003",
+      "name": "Avisar al administrador",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [920, 300]
+    }
+  ],
+  "connections": {
+    "Webhook pago": {
+      "main": [[{"node": "Verificar firma y datos", "type": "main", "index": 0}]]
+    },
+    "Verificar firma y datos": {
+      "main": [[
+        {"node": "Confirmar recepción firmada", "type": "main", "index": 0},
+        {"node": "Avisar al administrador", "type": "main", "index": 0}
+      ]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Bogota"
+  },
+  "versionId": "7a483de1-bba8-4b86-a82d-5bc94d756004",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

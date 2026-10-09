@@ -245,25 +245,25 @@
 
 
 <!-- Chatbot flotante -->
-<div id="chatbot-toggle" onclick="cbToggle()" title="Atención al cliente">
-  <i>💬</i>
-</div>
-<div id="chatbot-panel">
+<button id="chatbot-toggle" type="button" onclick="cbToggle()" title="Atención al cliente" aria-label="Abrir asistente del catálogo" aria-expanded="false">
+  <i aria-hidden="true">💬</i>
+</button>
+<div id="chatbot-panel" aria-label="Asistente del catálogo">
   <div class="cb-header">
-    <span data-i18n="chat_title">Atención al cliente</span>
-    <span style="cursor:pointer;" onclick="cbToggle()">✕</span>
+    <span>Asistente del catálogo</span>
+    <button type="button" onclick="cbToggle()" aria-label="Cerrar asistente">✕</button>
   </div>
-  <div class="cb-body" id="cb-body">
+  <div class="cb-body" id="cb-body" aria-live="polite" aria-relevant="additions text">
     <div class="cb-msg bot" data-i18n="chat_greeting">Hola, soy el asistente virtual de Suministros Institucionales. ¿En qué puedo ayudarte?</div>
   </div>
   <div class="cb-quick cb-quick-start">
-    <button data-q="¿Cuáles son los tiempos de entrega?" data-i18n="chat_quick1">Tiempos de entrega</button>
-    <button data-q="¿Qué métodos de pago aceptan?" data-i18n="chat_quick2">Métodos de pago</button>
-    <button data-q="¿Cómo protegen mis datos?" data-i18n="chat_quick3">Protección de datos</button>
+    <button type="button" data-q="¿Qué productos tienen disponibles?">Productos disponibles</button>
+    <button type="button" data-q="¿Qué productos están restringidos?">Productos restringidos</button>
   </div>
+  <button class="cb-human-button" type="button">Hablar con una persona</button>
   <div class="cb-input">
-    <input type="text" id="cb-input-text" placeholder="Escribe tu mensaje..." data-i18n-placeholder="chat_placeholder">
-    <button onclick="cbEnviar()" data-i18n="chat_send">Enviar</button>
+    <input type="text" id="cb-input-text" placeholder="Pregunta sobre productos..." aria-label="Pregunta sobre el catálogo" maxlength="500">
+    <button id="cb-send-button" type="button" onclick="cbEnviar()">Enviar</button>
   </div>
 </div>
 
